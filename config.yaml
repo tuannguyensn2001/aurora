@@ -1,0 +1,7 @@
+service:
+  name: aurora-api
+  env: development
+
+logging:
+  level: debug
+  
