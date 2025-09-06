@@ -13,6 +13,14 @@ type Config struct {
 		Name string `yaml:"name"`
 		Env  string `yaml:"env"`
 	} `yaml:"service"`
+	Database struct {
+		Host     string `yaml:"host"`
+		Port     int    `yaml:"port"`
+		User     string `yaml:"user"`
+		Password string `yaml:"password"`
+		DBName   string `yaml:"dbname"`
+		SSLMode  string `yaml:"sslmode"`
+	} `yaml:"database"`
 }
 
 func Load(configPath string) (*Config, error) {

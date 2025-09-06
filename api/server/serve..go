@@ -2,19 +2,21 @@ package server
 
 import (
 	"api/config"
+	"api/internal/database"
 	"api/internal/endpoint"
 	"api/internal/handler"
+	"api/internal/repository"
+	"api/internal/service"
 	"io"
 	"log"
 	"net/http"
 	"os"
 
-	"github.com/gorilla/mux"
+	"github.com/rs/cors"
 	"github.com/rs/zerolog"
 )
 
 func Serve(configPath string) {
-
 	cfg, err := config.Load(configPath)
 	if err != nil {
 		log.Fatalf("Failed to load config: %v", err)
@@ -24,15 +26,34 @@ func Serve(configPath string) {
 
 	logger.Info().Msg("Starting server")
 
-	handler := handler.New()
+	// Initialize database connection
+	db, err := database.NewConnection(cfg)
+	if err != nil {
+		log.Fatalf("Failed to connect to database: %v", err)
+	}
 
-	endpointList := endpoint.Get(handler, logger)
+	// Initialize repository, service, and handler
+	repo := repository.New(db)
+	svc := service.New(repo)
+	h := handler.New(svc)
 
-	r := mux.NewRouter()
+	// Create endpoints
+	endpoints := endpoint.MakeEndpoints(h)
 
-	endpoint.Routes(r, endpointList)
+	// Create HTTP handler
+	httpHandler := endpoint.MakeHTTPHandler(endpoints)
 
-	http.ListenAndServe(":8080", r)
+	c := cors.New(cors.Options{
+		AllowedOrigins: []string{"*"},
+		AllowedMethods: []string{"GET", "POST", "PUT", "DELETE", "PATCH"},
+	})
+
+	httpHandler = c.Handler(httpHandler)
+
+	logger.Info().Msg("Server listening on :8080")
+	if err := http.ListenAndServe(":8080", httpHandler); err != nil {
+		log.Fatalf("Server failed to start: %v", err)
+	}
 }
 
 func getZerologLevel(level string) zerolog.Level {
@@ -48,6 +69,7 @@ func getZerologLevel(level string) zerolog.Level {
 	case "fatal":
 		return zerolog.FatalLevel
 	case "panic":
+		return zerolog.PanicLevel
 	}
 
 	return zerolog.InfoLevel
