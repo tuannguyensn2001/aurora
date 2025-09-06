@@ -1,7 +1,7 @@
 package main
 
 import (
-	"api/server"
+	"api/internal/fx"
 	"flag"
 )
 
@@ -10,5 +10,6 @@ var configPath = flag.String("config", "config.yaml", "path to config file")
 func main() {
 	flag.Parse()
 
-	server.Serve(*configPath)
+	app := fx.NewApp(*configPath)
+	app.Run()
 }
