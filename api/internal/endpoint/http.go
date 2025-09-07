@@ -156,6 +156,20 @@ func MakeHTTPHandler(endpoints Endpoints) http.Handler {
 		options...,
 	))
 
+	r.Methods("GET").Path("/api/v1/experiments").Handler(httptransport.NewServer(
+		endpoints.GetAllExperiments,
+		decodeGetAllExperimentsRequest,
+		encodeResponse,
+		options...,
+	))
+
+	r.Methods("GET").Path("/api/v1/experiments/{id}").Handler(httptransport.NewServer(
+		endpoints.GetExperimentByID,
+		decodeGetExperimentByIDRequest,
+		encodeResponse,
+		options...,
+	))
+
 	return r
 }
 
@@ -400,4 +414,17 @@ func decodeCreateExperimentRequest(ctx context.Context, r *http.Request) (interf
 		return nil, err
 	}
 	return CreateExperimentRequest{Request: req}, nil
+}
+
+func decodeGetAllExperimentsRequest(ctx context.Context, r *http.Request) (interface{}, error) {
+	return GetAllExperimentsRequest{}, nil
+}
+
+func decodeGetExperimentByIDRequest(ctx context.Context, r *http.Request) (interface{}, error) {
+	vars := mux.Vars(r)
+	id, err := ParseID(vars["id"])
+	if err != nil {
+		return nil, err
+	}
+	return GetExperimentByIDRequest{ID: id}, nil
 }

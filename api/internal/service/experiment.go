@@ -158,3 +158,41 @@ func (s *service) CreateExperiment(ctx context.Context, req *dto.CreateExperimen
 
 	return "Experiment created successfully", nil
 }
+
+// GetAllExperiments retrieves all experiments without variants
+func (s *service) GetAllExperiments(ctx context.Context) ([]*model.Experiment, error) {
+	return s.repo.GetAllExperiments(ctx, 0, 0) // 0, 0 means no limit and no offset
+}
+
+// GetExperimentByID retrieves an experiment by ID with all variants and their parameters
+func (s *service) GetExperimentByID(ctx context.Context, id uint) (*model.Experiment, []*model.ExperimentVariant, map[int][]*model.ExperimentVariantParameter, *model.Attribute, error) {
+	// Get the experiment
+	experiment, err := s.repo.GetExperimentByID(ctx, id)
+	if err != nil {
+		return nil, nil, nil, nil, fmt.Errorf("failed to get experiment: %w", err)
+	}
+
+	// Get the hash attribute
+	hashAttribute, err := s.repo.GetAttributeByID(ctx, uint(experiment.HashAttributeID))
+	if err != nil {
+		return nil, nil, nil, nil, fmt.Errorf("failed to get hash attribute: %w", err)
+	}
+
+	// Get all variants for this experiment
+	variants, err := s.repo.GetExperimentVariantsByExperimentID(ctx, id)
+	if err != nil {
+		return nil, nil, nil, nil, fmt.Errorf("failed to get experiment variants: %w", err)
+	}
+
+	// Get parameters for each variant
+	variantParametersMap := make(map[int][]*model.ExperimentVariantParameter)
+	for _, variant := range variants {
+		parameters, err := s.repo.GetExperimentVariantParametersByVariantID(ctx, uint(variant.ID))
+		if err != nil {
+			return nil, nil, nil, nil, fmt.Errorf("failed to get variant parameters for variant %d: %w", variant.ID, err)
+		}
+		variantParametersMap[variant.ID] = parameters
+	}
+
+	return experiment, variants, variantParametersMap, hashAttribute, nil
+}

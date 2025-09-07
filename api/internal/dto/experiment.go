@@ -3,6 +3,8 @@ package dto
 import (
 	"errors"
 
+	"api/internal/model"
+
 	"github.com/go-playground/validator/v10"
 )
 
@@ -62,4 +64,153 @@ type CreateExperimentVariantParameterRequest struct {
 	ParameterID       int    `json:"parameterId" binding:"required" validate:"required"`
 	ParameterName     string `json:"parameterName" binding:"required" validate:"required"`
 	RolloutValue      string `json:"rolloutValue" binding:"required" validate:"required"`
+}
+
+// ExperimentResponse represents the response for experiment operations (without variants)
+type ExperimentResponse struct {
+	ID              int    `json:"id"`
+	Name            string `json:"name"`
+	Uuid            string `json:"uuid"`
+	Hypothesis      string `json:"hypothesis"`
+	Description     string `json:"description"`
+	StartDate       int64  `json:"startDate"`
+	EndDate         int64  `json:"endDate"`
+	HashAttributeID int    `json:"hashAttributeId"`
+	PopulationSize  int    `json:"populationSize"`
+	Strategy        string `json:"strategy"`
+	CreatedAt       int64  `json:"createdAt"`
+	UpdatedAt       int64  `json:"updatedAt"`
+	Status          string `json:"status"`
+}
+
+// HashAttributeResponse represents the hash attribute in experiment responses
+type HashAttributeResponse struct {
+	ID   int    `json:"id"`
+	Name string `json:"name"`
+}
+
+// ExperimentVariantResponse represents the response for experiment variant
+type ExperimentVariantResponse struct {
+	ID                int                                  `json:"id"`
+	Name              string                               `json:"name"`
+	Description       string                               `json:"description"`
+	TrafficAllocation int                                  `json:"trafficAllocation"`
+	CreatedAt         int64                                `json:"createdAt"`
+	UpdatedAt         int64                                `json:"updatedAt"`
+	Parameters        []ExperimentVariantParameterResponse `json:"parameters"`
+}
+
+// ExperimentVariantParameterResponse represents the response for experiment variant parameter
+type ExperimentVariantParameterResponse struct {
+	ID                int    `json:"id"`
+	ParameterDataType string `json:"parameterDataType"`
+	ParameterID       int    `json:"parameterId"`
+	ParameterName     string `json:"parameterName"`
+	RolloutValue      string `json:"rolloutValue"`
+	CreatedAt         int64  `json:"createdAt"`
+	UpdatedAt         int64  `json:"updatedAt"`
+}
+
+// ExperimentDetailResponse represents the detailed response for experiment operations (with variants and parameters)
+type ExperimentDetailResponse struct {
+	ID              int                         `json:"id"`
+	Name            string                      `json:"name"`
+	Uuid            string                      `json:"uuid"`
+	Hypothesis      string                      `json:"hypothesis"`
+	Description     string                      `json:"description"`
+	StartDate       int64                       `json:"startDate"`
+	EndDate         int64                       `json:"endDate"`
+	HashAttributeID int                         `json:"hashAttributeId"`
+	HashAttribute   HashAttributeResponse       `json:"hashAttribute"`
+	PopulationSize  int                         `json:"populationSize"`
+	Strategy        string                      `json:"strategy"`
+	CreatedAt       int64                       `json:"createdAt"`
+	UpdatedAt       int64                       `json:"updatedAt"`
+	Status          string                      `json:"status"`
+	Variants        []ExperimentVariantResponse `json:"variants"`
+}
+
+// ToExperimentResponse converts a model.Experiment to ExperimentResponse
+func ToExperimentResponse(experiment *model.Experiment) ExperimentResponse {
+	return ExperimentResponse{
+		ID:              experiment.ID,
+		Name:            experiment.Name,
+		Uuid:            experiment.Uuid,
+		Hypothesis:      experiment.Hypothesis,
+		Description:     experiment.Description,
+		StartDate:       experiment.StartDate,
+		EndDate:         experiment.EndDate,
+		HashAttributeID: experiment.HashAttributeID,
+		PopulationSize:  experiment.PopulationSize,
+		Strategy:        experiment.Strategy,
+		CreatedAt:       experiment.CreatedAt,
+		UpdatedAt:       experiment.UpdatedAt,
+		Status:          experiment.Status,
+	}
+}
+
+// ToExperimentVariantParameterResponse converts a model.ExperimentVariantParameter to ExperimentVariantParameterResponse
+func ToExperimentVariantParameterResponse(parameter *model.ExperimentVariantParameter) ExperimentVariantParameterResponse {
+	return ExperimentVariantParameterResponse{
+		ID:                parameter.ID,
+		ParameterDataType: parameter.ParameterDataType,
+		ParameterID:       parameter.ParameterID,
+		ParameterName:     parameter.ParameterName,
+		RolloutValue:      parameter.RolloutValue,
+		CreatedAt:         parameter.CreatedAt,
+		UpdatedAt:         parameter.UpdatedAt,
+	}
+}
+
+// ToExperimentVariantResponse converts a model.ExperimentVariant to ExperimentVariantResponse
+func ToExperimentVariantResponse(variant *model.ExperimentVariant, parameters []*model.ExperimentVariantParameter) ExperimentVariantResponse {
+	parameterResponses := make([]ExperimentVariantParameterResponse, len(parameters))
+	for i, param := range parameters {
+		parameterResponses[i] = ToExperimentVariantParameterResponse(param)
+	}
+
+	return ExperimentVariantResponse{
+		ID:                variant.ID,
+		Name:              variant.Name,
+		Description:       variant.Description,
+		TrafficAllocation: variant.TrafficAllocation,
+		CreatedAt:         variant.CreatedAt,
+		UpdatedAt:         variant.UpdatedAt,
+		Parameters:        parameterResponses,
+	}
+}
+
+// ToExperimentDetailResponse converts a model.Experiment with variants and parameters to ExperimentDetailResponse
+func ToExperimentDetailResponse(experiment *model.Experiment, variants []*model.ExperimentVariant, variantParametersMap map[int][]*model.ExperimentVariantParameter, hashAttribute *model.Attribute) ExperimentDetailResponse {
+	variantResponses := make([]ExperimentVariantResponse, len(variants))
+	for i, variant := range variants {
+		parameters := variantParametersMap[variant.ID]
+		variantResponses[i] = ToExperimentVariantResponse(variant, parameters)
+	}
+
+	hashAttrResponse := HashAttributeResponse{
+		ID:   experiment.HashAttributeID,
+		Name: "",
+	}
+	if hashAttribute != nil {
+		hashAttrResponse.Name = hashAttribute.Name
+	}
+
+	return ExperimentDetailResponse{
+		ID:              experiment.ID,
+		Name:            experiment.Name,
+		Uuid:            experiment.Uuid,
+		Hypothesis:      experiment.Hypothesis,
+		Description:     experiment.Description,
+		StartDate:       experiment.StartDate,
+		EndDate:         experiment.EndDate,
+		HashAttributeID: experiment.HashAttributeID,
+		HashAttribute:   hashAttrResponse,
+		PopulationSize:  experiment.PopulationSize,
+		Strategy:        experiment.Strategy,
+		CreatedAt:       experiment.CreatedAt,
+		UpdatedAt:       experiment.UpdatedAt,
+		Status:          experiment.Status,
+		Variants:        variantResponses,
+	}
 }

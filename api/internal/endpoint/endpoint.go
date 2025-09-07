@@ -34,6 +34,8 @@ type Endpoints struct {
 	UpdateParameterRule          endpoint.Endpoint
 	DeleteParameterRule          endpoint.Endpoint
 	CreateExperiment             endpoint.Endpoint
+	GetAllExperiments            endpoint.Endpoint
+	GetExperimentByID            endpoint.Endpoint
 }
 
 // MakeEndpoints creates all endpoints
@@ -61,6 +63,8 @@ func MakeEndpoints(h *handler.Handler) Endpoints {
 		UpdateParameterRule:          makeUpdateParameterRuleEndpoint(h),
 		DeleteParameterRule:          makeDeleteParameterRuleEndpoint(h),
 		CreateExperiment:             makeCreateExperimentEndpoint(h),
+		GetAllExperiments:            makeGetAllExperimentsEndpoint(h),
+		GetExperimentByID:            makeGetExperimentByIDEndpoint(h),
 	}
 }
 
@@ -331,6 +335,27 @@ func makeCreateExperimentEndpoint(h *handler.Handler) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(CreateExperimentRequest)
 		return h.CreateExperiment(ctx, &req.Request)
+	}
+}
+
+// GetAllExperimentsRequest represents the endpoint request
+type GetAllExperimentsRequest struct{}
+
+func makeGetAllExperimentsEndpoint(h *handler.Handler) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		return h.GetAllExperiments(ctx)
+	}
+}
+
+// GetExperimentByIDRequest represents the endpoint request
+type GetExperimentByIDRequest struct {
+	ID uint `json:"id"`
+}
+
+func makeGetExperimentByIDEndpoint(h *handler.Handler) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(GetExperimentByIDRequest)
+		return h.GetExperimentByID(ctx, req.ID)
 	}
 }
 

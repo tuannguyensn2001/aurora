@@ -43,6 +43,8 @@ type Service interface {
 
 	// Experiment operations
 	CreateExperiment(ctx context.Context, req *dto.CreateExperimentRequest) (string, error)
+	GetAllExperiments(ctx context.Context) ([]*model.Experiment, error)
+	GetExperimentByID(ctx context.Context, id uint) (*model.Experiment, []*model.ExperimentVariant, map[int][]*model.ExperimentVariantParameter, *model.Attribute, error)
 }
 
 // service implements Service

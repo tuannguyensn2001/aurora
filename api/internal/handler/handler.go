@@ -361,3 +361,37 @@ func (h *Handler) CreateExperiment(ctx context.Context, req *dto.CreateExperimen
 	logger.Info().Msg("Experiment created successfully")
 	return message, nil
 }
+
+// GetAllExperiments handles the business logic for getting all experiments
+func (h *Handler) GetAllExperiments(ctx context.Context) ([]dto.ExperimentResponse, error) {
+	logger := log.Ctx(ctx).With().Str("handler", "get-all-experiments").Logger()
+	logger.Info().Msg("Getting all experiments")
+
+	experiments, err := h.service.GetAllExperiments(ctx)
+	if err != nil {
+		logger.Error().Err(err).Msg("Failed to get all experiments")
+		return nil, err
+	}
+
+	responses := make([]dto.ExperimentResponse, len(experiments))
+	for i, experiment := range experiments {
+		responses[i] = dto.ToExperimentResponse(experiment)
+	}
+
+	return responses, nil
+}
+
+// GetExperimentByID handles the business logic for getting an experiment by ID with variants and parameters
+func (h *Handler) GetExperimentByID(ctx context.Context, id uint) (*dto.ExperimentDetailResponse, error) {
+	logger := log.Ctx(ctx).With().Str("handler", "get-experiment-by-id").Uint("id", id).Logger()
+	logger.Info().Msg("Getting experiment by ID with details")
+
+	experiment, variants, variantParametersMap, hashAttribute, err := h.service.GetExperimentByID(ctx, id)
+	if err != nil {
+		logger.Error().Err(err).Uint("id", id).Msg("Failed to get experiment by ID")
+		return nil, err
+	}
+
+	response := dto.ToExperimentDetailResponse(experiment, variants, variantParametersMap, hashAttribute)
+	return &response, nil
+}
