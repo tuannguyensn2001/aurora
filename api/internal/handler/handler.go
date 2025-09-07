@@ -130,3 +130,81 @@ func (h *Handler) DecrementAttributeUsageCount(ctx context.Context, id uint) err
 
 	return nil
 }
+
+// CreateSegment handles the business logic for creating a segment
+func (h *Handler) CreateSegment(ctx context.Context, req *dto.CreateSegmentRequest) (*dto.SegmentResponse, error) {
+	logger := log.Ctx(ctx).With().Str("handler", "create-segment").Logger()
+	logger.Info().Msg("Creating segment")
+
+	segment, err := h.service.CreateSegment(ctx, req)
+	if err != nil {
+		logger.Error().Err(err).Msg("Failed to create segment")
+		return nil, err
+	}
+
+	response := dto.ToSegmentResponse(segment)
+	return &response, nil
+}
+
+// GetAllSegments handles the business logic for getting all segments
+func (h *Handler) GetAllSegments(ctx context.Context) ([]dto.SegmentResponse, error) {
+	logger := log.Ctx(ctx).With().Str("handler", "get-all-segments").Logger()
+	logger.Info().Msg("Getting all segments")
+
+	segments, err := h.service.GetAllSegments(ctx)
+	if err != nil {
+		logger.Error().Err(err).Msg("Failed to get all segments")
+		return nil, err
+	}
+
+	responses := make([]dto.SegmentResponse, len(segments))
+	for i, segment := range segments {
+		responses[i] = dto.ToSegmentResponse(segment)
+	}
+
+	return responses, nil
+}
+
+// GetSegmentByID handles the business logic for getting a segment by ID
+func (h *Handler) GetSegmentByID(ctx context.Context, id uint) (*dto.SegmentResponse, error) {
+	logger := log.Ctx(ctx).With().Str("handler", "get-segment-by-id").Uint("id", id).Logger()
+	logger.Info().Msg("Getting segment by ID")
+
+	segment, err := h.service.GetSegmentByID(ctx, id)
+	if err != nil {
+		logger.Error().Err(err).Uint("id", id).Msg("Failed to get segment by ID")
+		return nil, err
+	}
+
+	response := dto.ToSegmentResponse(segment)
+	return &response, nil
+}
+
+// UpdateSegment handles the business logic for updating a segment
+func (h *Handler) UpdateSegment(ctx context.Context, id uint, req *dto.UpdateSegmentRequest) (*dto.SegmentResponse, error) {
+	logger := log.Ctx(ctx).With().Str("handler", "update-segment").Uint("id", id).Logger()
+	logger.Info().Msg("Updating segment")
+
+	segment, err := h.service.UpdateSegment(ctx, id, req)
+	if err != nil {
+		logger.Error().Err(err).Uint("id", id).Msg("Failed to update segment")
+		return nil, err
+	}
+
+	response := dto.ToSegmentResponse(segment)
+	return &response, nil
+}
+
+// DeleteSegment handles the business logic for deleting a segment
+func (h *Handler) DeleteSegment(ctx context.Context, id uint) error {
+	logger := log.Ctx(ctx).With().Str("handler", "delete-segment").Uint("id", id).Logger()
+	logger.Info().Msg("Deleting segment")
+
+	err := h.service.DeleteSegment(ctx, id)
+	if err != nil {
+		logger.Error().Err(err).Uint("id", id).Msg("Failed to delete segment")
+		return err
+	}
+
+	return nil
+}

@@ -19,6 +19,11 @@ type Endpoints struct {
 	DeleteAttribute              endpoint.Endpoint
 	IncrementAttributeUsageCount endpoint.Endpoint
 	DecrementAttributeUsageCount endpoint.Endpoint
+	CreateSegment                endpoint.Endpoint
+	GetAllSegments               endpoint.Endpoint
+	GetSegmentByID               endpoint.Endpoint
+	UpdateSegment                endpoint.Endpoint
+	DeleteSegment                endpoint.Endpoint
 }
 
 // MakeEndpoints creates all endpoints
@@ -31,6 +36,11 @@ func MakeEndpoints(h *handler.Handler) Endpoints {
 		DeleteAttribute:              makeDeleteAttributeEndpoint(h),
 		IncrementAttributeUsageCount: makeIncrementAttributeUsageCountEndpoint(h),
 		DecrementAttributeUsageCount: makeDecrementAttributeUsageCountEndpoint(h),
+		CreateSegment:                makeCreateSegmentEndpoint(h),
+		GetAllSegments:               makeGetAllSegmentsEndpoint(h),
+		GetSegmentByID:               makeGetSegmentByIDEndpoint(h),
+		UpdateSegment:                makeUpdateSegmentEndpoint(h),
+		DeleteSegment:                makeDeleteSegmentEndpoint(h),
 	}
 }
 
@@ -115,6 +125,65 @@ func makeDecrementAttributeUsageCountEndpoint(h *handler.Handler) endpoint.Endpo
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(DecrementAttributeUsageCountRequest)
 		err := h.DecrementAttributeUsageCount(ctx, req.ID)
+		return nil, err
+	}
+}
+
+// CreateSegmentRequest represents the endpoint request
+type CreateSegmentRequest struct {
+	Request dto.CreateSegmentRequest `json:"request"`
+}
+
+func makeCreateSegmentEndpoint(h *handler.Handler) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(CreateSegmentRequest)
+		return h.CreateSegment(ctx, &req.Request)
+	}
+}
+
+// GetAllSegmentsRequest represents the endpoint request
+type GetAllSegmentsRequest struct{}
+
+func makeGetAllSegmentsEndpoint(h *handler.Handler) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		return h.GetAllSegments(ctx)
+	}
+}
+
+// GetSegmentByIDRequest represents the endpoint request
+type GetSegmentByIDRequest struct {
+	ID uint `json:"id"`
+}
+
+func makeGetSegmentByIDEndpoint(h *handler.Handler) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(GetSegmentByIDRequest)
+		return h.GetSegmentByID(ctx, req.ID)
+	}
+}
+
+// UpdateSegmentRequest represents the endpoint request
+type UpdateSegmentRequest struct {
+	ID      uint                     `json:"id"`
+	Request dto.UpdateSegmentRequest `json:"request"`
+}
+
+func makeUpdateSegmentEndpoint(h *handler.Handler) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(UpdateSegmentRequest)
+		return h.UpdateSegment(ctx, req.ID, &req.Request)
+	}
+}
+
+// DeleteSegmentRequest represents the endpoint request
+type DeleteSegmentRequest struct {
+	ID uint `json:"id"`
+}
+
+func makeDeleteSegmentEndpoint(h *handler.Handler) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(DeleteSegmentRequest)
+		err := h.DeleteSegment(ctx, req.ID)
 		return nil, err
 	}
 }

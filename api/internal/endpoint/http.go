@@ -69,6 +69,42 @@ func MakeHTTPHandler(endpoints Endpoints) http.Handler {
 		options...,
 	))
 
+	// Segment routes - matching NestJS controller paths with api prefix
+	r.Methods("POST").Path("/api/v1/segments").Handler(httptransport.NewServer(
+		endpoints.CreateSegment,
+		decodeCreateSegmentRequest,
+		encodeCreatedResponse,
+		options...,
+	))
+
+	r.Methods("GET").Path("/api/v1/segments").Handler(httptransport.NewServer(
+		endpoints.GetAllSegments,
+		decodeGetAllSegmentsRequest,
+		encodeResponse,
+		options...,
+	))
+
+	r.Methods("GET").Path("/api/v1/segments/{id}").Handler(httptransport.NewServer(
+		endpoints.GetSegmentByID,
+		decodeGetSegmentByIDRequest,
+		encodeResponse,
+		options...,
+	))
+
+	r.Methods("PATCH").Path("/api/v1/segments/{id}").Handler(httptransport.NewServer(
+		endpoints.UpdateSegment,
+		decodeUpdateSegmentRequest,
+		encodeResponse,
+		options...,
+	))
+
+	r.Methods("DELETE").Path("/api/v1/segments/{id}").Handler(httptransport.NewServer(
+		endpoints.DeleteSegment,
+		decodeDeleteSegmentRequest,
+		encodeNoContentResponse,
+		options...,
+	))
+
 	return r
 }
 
@@ -193,4 +229,50 @@ func containsHelper(s, substr string) bool {
 		}
 	}
 	return false
+}
+
+// Segment decode functions
+func decodeCreateSegmentRequest(ctx context.Context, r *http.Request) (interface{}, error) {
+	var req dto.CreateSegmentRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return nil, err
+	}
+	return CreateSegmentRequest{Request: req}, nil
+}
+
+func decodeGetAllSegmentsRequest(ctx context.Context, r *http.Request) (interface{}, error) {
+	return GetAllSegmentsRequest{}, nil
+}
+
+func decodeGetSegmentByIDRequest(ctx context.Context, r *http.Request) (interface{}, error) {
+	vars := mux.Vars(r)
+	id, err := ParseID(vars["id"])
+	if err != nil {
+		return nil, err
+	}
+	return GetSegmentByIDRequest{ID: id}, nil
+}
+
+func decodeUpdateSegmentRequest(ctx context.Context, r *http.Request) (interface{}, error) {
+	vars := mux.Vars(r)
+	id, err := ParseID(vars["id"])
+	if err != nil {
+		return nil, err
+	}
+
+	var req dto.UpdateSegmentRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return nil, err
+	}
+
+	return UpdateSegmentRequest{ID: id, Request: req}, nil
+}
+
+func decodeDeleteSegmentRequest(ctx context.Context, r *http.Request) (interface{}, error) {
+	vars := mux.Vars(r)
+	id, err := ParseID(vars["id"])
+	if err != nil {
+		return nil, err
+	}
+	return DeleteSegmentRequest{ID: id}, nil
 }

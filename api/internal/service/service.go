@@ -18,6 +18,14 @@ type Service interface {
 	DeleteAttribute(ctx context.Context, id uint) error
 	IncrementAttributeUsageCount(ctx context.Context, id uint) error
 	DecrementAttributeUsageCount(ctx context.Context, id uint) error
+
+	// Segment operations
+	CreateSegment(ctx context.Context, req *dto.CreateSegmentRequest) (*model.Segment, error)
+	GetSegmentByID(ctx context.Context, id uint) (*model.Segment, error)
+	GetSegmentByName(ctx context.Context, name string) (*model.Segment, error)
+	GetAllSegments(ctx context.Context) ([]*model.Segment, error)
+	UpdateSegment(ctx context.Context, id uint, req *dto.UpdateSegmentRequest) (*model.Segment, error)
+	DeleteSegment(ctx context.Context, id uint) error
 }
 
 // service implements Service

@@ -20,6 +20,25 @@ type Repository interface {
 	IncrementAttributeUsageCount(ctx context.Context, id uint) error
 	DecrementAttributeUsageCount(ctx context.Context, id uint) error
 	CountAttributes(ctx context.Context) (int64, error)
+
+	// Segment operations
+	CreateSegment(ctx context.Context, segment *model.Segment) error
+	GetSegmentByID(ctx context.Context, id uint) (*model.Segment, error)
+	GetSegmentByName(ctx context.Context, name string) (*model.Segment, error)
+	GetAllSegments(ctx context.Context, limit, offset int) ([]*model.Segment, error)
+	UpdateSegment(ctx context.Context, segment *model.Segment) error
+	DeleteSegment(ctx context.Context, id uint) error
+	CountSegments(ctx context.Context) (int64, error)
+
+	// Segment Rule operations
+	CreateSegmentRule(ctx context.Context, rule *model.SegmentRule) error
+	GetSegmentRulesBySegmentID(ctx context.Context, segmentID uint) ([]*model.SegmentRule, error)
+	DeleteSegmentRulesBySegmentID(ctx context.Context, segmentID uint) error
+
+	// Segment Rule Condition operations
+	CreateSegmentRuleCondition(ctx context.Context, condition *model.SegmentRuleCondition) error
+	GetSegmentRuleConditionsByRuleID(ctx context.Context, ruleID uint) ([]*model.SegmentRuleCondition, error)
+	DeleteSegmentRuleConditionsByRuleID(ctx context.Context, ruleID uint) error
 }
 
 // repository implements Repository
