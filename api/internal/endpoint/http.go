@@ -253,10 +253,14 @@ func encodeError(ctx context.Context, err error, w http.ResponseWriter) {
 	}
 
 	w.WriteHeader(statusCode)
-	json.NewEncoder(w).Encode(dto.ErrorResponse{
+	if err := json.NewEncoder(w).Encode(dto.ErrorResponse{
 		Error:   errorType,
 		Message: errMsg,
-	})
+	}); err != nil {
+		// Log the error but don't return it since we've already written the status code
+		// In a production environment, you might want to log this error
+		_ = err
+	}
 }
 
 // Helper function to check if string contains substring (case insensitive)

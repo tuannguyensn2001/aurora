@@ -21,7 +21,7 @@ func (s *service) CreateAttribute(ctx context.Context, req *dto.CreateAttributeR
 
 	// Validate enum options for enum data type
 	if req.DataType == model.DataTypeEnum {
-		if req.EnumOptions == nil || len(req.EnumOptions) == 0 {
+		if len(req.EnumOptions) == 0 {
 			return nil, errors.New("enum options are required for enum data type")
 		}
 	}
@@ -106,7 +106,7 @@ func (s *service) UpdateAttribute(ctx context.Context, id uint, req *dto.UpdateA
 	if req.DataType != nil {
 		// Validate enum options if data type is being changed to enum
 		if *req.DataType == model.DataTypeEnum {
-			if req.EnumOptions == nil || len(req.EnumOptions) == 0 {
+			if len(req.EnumOptions) == 0 {
 				return nil, errors.New("enum options are required for enum data type")
 			}
 		}
