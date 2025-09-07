@@ -149,6 +149,135 @@ func (s *service) UpdateParameter(ctx context.Context, id uint, req *dto.UpdateP
 	return parameter, nil
 }
 
+// UpdateParameterWithRules updates a parameter and completely replaces all its rules
+func (s *service) UpdateParameterWithRules(ctx context.Context, id uint, req *dto.UpdateParameterWithRulesRequest) (*model.Parameter, error) {
+	parameter, err := s.GetParameterByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+
+	// Check if name is being updated and if it conflicts
+	if req.Name != nil && *req.Name != parameter.Name {
+		existing, err := s.repo.GetParameterByName(ctx, *req.Name)
+		if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, err
+		}
+		if existing != nil {
+			return nil, errors.New("parameter with name '" + *req.Name + "' already exists")
+		}
+		parameter.Name = *req.Name
+	}
+
+	// Update description if provided
+	if req.Description != nil {
+		parameter.Description = *req.Description
+	}
+
+	// Determine the final data type for validation
+	finalDataType := parameter.DataType
+	if req.DataType != nil {
+		finalDataType = *req.DataType
+	}
+
+	// Validate default rollout value if being updated
+	if req.DefaultRolloutValue != nil {
+		if err := s.validateParameterValue(req.DefaultRolloutValue, finalDataType); err != nil {
+			return nil, err
+		}
+		parameter.DefaultRolloutValue = model.RolloutValue{
+			Data: req.DefaultRolloutValue,
+		}
+	}
+
+	// If data type is being changed, validate all existing condition values
+	if req.DataType != nil && *req.DataType != parameter.DataType {
+		for _, condition := range parameter.Conditions {
+			if err := s.validateParameterValue(condition.RolloutValue.Data, *req.DataType); err != nil {
+				return nil, fmt.Errorf("existing condition rollout value is invalid for new data type: %v", err)
+			}
+		}
+		parameter.DataType = *req.DataType
+	}
+
+	// Update parameter metadata first
+	if err := s.repo.UpdateParameter(ctx, parameter); err != nil {
+		return nil, err
+	}
+
+	// Handle rules replacement if provided
+	if req.Rules != nil {
+		// Delete all existing rules for this parameter
+		if err := s.repo.DeleteParameterRulesByParameterID(ctx, id); err != nil {
+			return nil, fmt.Errorf("failed to delete existing rules: %v", err)
+		}
+
+		// Create new rules
+		for _, ruleReq := range req.Rules {
+			// Validate rollout value for the rule
+			if err := s.validateParameterValue(ruleReq.RolloutValue, finalDataType); err != nil {
+				return nil, fmt.Errorf("invalid rollout value for rule '%s': %v", ruleReq.Name, err)
+			}
+
+			rule := &model.ParameterRule{
+				Name:         ruleReq.Name,
+				Description:  ruleReq.Description,
+				Type:         ruleReq.Type,
+				ParameterID:  id,
+				RolloutValue: model.RolloutValue{Data: ruleReq.RolloutValue},
+				SegmentID:    ruleReq.SegmentID,
+				MatchType:    ruleReq.MatchType,
+			}
+
+			// Validate segment-based rule requirements
+			if ruleReq.Type == model.RuleTypeSegment {
+				if ruleReq.SegmentID == nil || ruleReq.MatchType == nil {
+					return nil, fmt.Errorf("segment ID and match type are required for segment-based rule '%s'", ruleReq.Name)
+				}
+				// Validate that segment exists
+				_, err := s.repo.GetSegmentByID(ctx, *ruleReq.SegmentID)
+				if err != nil {
+					if errors.Is(err, gorm.ErrRecordNotFound) {
+						return nil, fmt.Errorf("segment with ID %d not found for rule '%s'", *ruleReq.SegmentID, ruleReq.Name)
+					}
+					return nil, err
+				}
+			}
+
+			// Create the rule
+			if err := s.repo.CreateParameterRule(ctx, rule); err != nil {
+				return nil, fmt.Errorf("failed to create rule '%s': %v", ruleReq.Name, err)
+			}
+
+			// Add conditions if it's an attribute-based rule
+			if ruleReq.Type == model.RuleTypeAttribute && len(ruleReq.Conditions) > 0 {
+				for _, conditionReq := range ruleReq.Conditions {
+					// Validate that attribute exists
+					_, err := s.repo.GetAttributeByID(ctx, conditionReq.AttributeID)
+					if err != nil {
+						if errors.Is(err, gorm.ErrRecordNotFound) {
+							return nil, fmt.Errorf("attribute with ID %d not found for rule '%s'", conditionReq.AttributeID, ruleReq.Name)
+						}
+						return nil, err
+					}
+
+					condition := &model.ParameterRuleCondition{
+						RuleID:      rule.ID,
+						AttributeID: conditionReq.AttributeID,
+						Operator:    conditionReq.Operator,
+						Value:       conditionReq.Value,
+					}
+					if err := s.repo.CreateParameterRuleCondition(ctx, condition); err != nil {
+						return nil, fmt.Errorf("failed to create condition for rule '%s': %v", ruleReq.Name, err)
+					}
+				}
+			}
+		}
+	}
+
+	// Return updated parameter with all rules
+	return s.GetParameterByID(ctx, id)
+}
+
 // DeleteParameter deletes a parameter
 func (s *service) DeleteParameter(ctx context.Context, id uint) error {
 	parameter, err := s.GetParameterByID(ctx, id)

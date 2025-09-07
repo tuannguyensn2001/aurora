@@ -273,6 +273,21 @@ func (h *Handler) UpdateParameter(ctx context.Context, id uint, req *dto.UpdateP
 	return &response, nil
 }
 
+// UpdateParameterWithRules handles the business logic for comprehensive parameter update with rules
+func (h *Handler) UpdateParameterWithRules(ctx context.Context, id uint, req *dto.UpdateParameterWithRulesRequest) (*dto.ParameterResponse, error) {
+	logger := log.Ctx(ctx).With().Str("handler", "update-parameter-with-rules").Uint("id", id).Logger()
+	logger.Info().Msg("Updating parameter with rules")
+
+	parameter, err := h.service.UpdateParameterWithRules(ctx, id, req)
+	if err != nil {
+		logger.Error().Err(err).Uint("id", id).Msg("Failed to update parameter with rules")
+		return nil, err
+	}
+
+	response := dto.ToParameterResponse(parameter)
+	return &response, nil
+}
+
 // DeleteParameter handles the business logic for deleting a parameter
 func (h *Handler) DeleteParameter(ctx context.Context, id uint) error {
 	logger := log.Ctx(ctx).With().Str("handler", "delete-parameter").Uint("id", id).Logger()

@@ -57,6 +57,15 @@ type UpdateParameterRequest struct {
 	DefaultRolloutValue interface{}              `json:"defaultRolloutValue,omitempty"`
 }
 
+// UpdateParameterWithRulesRequest represents the comprehensive request to update a parameter with all its rules
+type UpdateParameterWithRulesRequest struct {
+	Name                *string                      `json:"name,omitempty"`
+	Description         *string                      `json:"description,omitempty"`
+	DataType            *model.ParameterDataType     `json:"dataType,omitempty"`
+	DefaultRolloutValue interface{}                  `json:"defaultRolloutValue,omitempty"`
+	Rules               []CreateParameterRuleRequest `json:"rules,omitempty" validate:"dive"`
+}
+
 // ParameterRuleConditionResponse represents the response for parameter rule condition operations
 type ParameterRuleConditionResponse struct {
 	ID          uint                    `json:"id"`

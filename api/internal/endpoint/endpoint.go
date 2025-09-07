@@ -28,6 +28,7 @@ type Endpoints struct {
 	GetAllParameters             endpoint.Endpoint
 	GetParameterByID             endpoint.Endpoint
 	UpdateParameter              endpoint.Endpoint
+	UpdateParameterWithRules     endpoint.Endpoint
 	DeleteParameter              endpoint.Endpoint
 	AddParameterRule             endpoint.Endpoint
 	UpdateParameterRule          endpoint.Endpoint
@@ -53,6 +54,7 @@ func MakeEndpoints(h *handler.Handler) Endpoints {
 		GetAllParameters:             makeGetAllParametersEndpoint(h),
 		GetParameterByID:             makeGetParameterByIDEndpoint(h),
 		UpdateParameter:              makeUpdateParameterEndpoint(h),
+		UpdateParameterWithRules:     makeUpdateParameterWithRulesEndpoint(h),
 		DeleteParameter:              makeDeleteParameterEndpoint(h),
 		AddParameterRule:             makeAddParameterRuleEndpoint(h),
 		UpdateParameterRule:          makeUpdateParameterRuleEndpoint(h),
@@ -249,6 +251,19 @@ func makeUpdateParameterEndpoint(h *handler.Handler) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(UpdateParameterRequest)
 		return h.UpdateParameter(ctx, req.ID, &req.Request)
+	}
+}
+
+// UpdateParameterWithRulesRequest represents the endpoint request
+type UpdateParameterWithRulesRequest struct {
+	ID      uint                                `json:"id"`
+	Request dto.UpdateParameterWithRulesRequest `json:"request"`
+}
+
+func makeUpdateParameterWithRulesEndpoint(h *handler.Handler) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(UpdateParameterWithRulesRequest)
+		return h.UpdateParameterWithRules(ctx, req.ID, &req.Request)
 	}
 }
 
