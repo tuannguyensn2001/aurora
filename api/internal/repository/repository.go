@@ -39,6 +39,35 @@ type Repository interface {
 	CreateSegmentRuleCondition(ctx context.Context, condition *model.SegmentRuleCondition) error
 	GetSegmentRuleConditionsByRuleID(ctx context.Context, ruleID uint) ([]*model.SegmentRuleCondition, error)
 	DeleteSegmentRuleConditionsByRuleID(ctx context.Context, ruleID uint) error
+
+	// Parameter operations
+	CreateParameter(ctx context.Context, parameter *model.Parameter) error
+	GetParameterByID(ctx context.Context, id uint) (*model.Parameter, error)
+	GetParameterByName(ctx context.Context, name string) (*model.Parameter, error)
+	GetAllParameters(ctx context.Context, limit, offset int) ([]*model.Parameter, error)
+	UpdateParameter(ctx context.Context, parameter *model.Parameter) error
+	DeleteParameter(ctx context.Context, id uint) error
+	IncrementParameterUsageCount(ctx context.Context, id uint) error
+	DecrementParameterUsageCount(ctx context.Context, id uint) error
+	CountParameters(ctx context.Context) (int64, error)
+
+	// Parameter Rule operations
+	CreateParameterRule(ctx context.Context, rule *model.ParameterRule) error
+	GetParameterRuleByID(ctx context.Context, id uint) (*model.ParameterRule, error)
+	GetParameterRulesByParameterID(ctx context.Context, parameterID uint) ([]*model.ParameterRule, error)
+	UpdateParameterRule(ctx context.Context, rule *model.ParameterRule) error
+	DeleteParameterRule(ctx context.Context, id uint) error
+	DeleteParameterRulesByParameterID(ctx context.Context, parameterID uint) error
+
+	// Parameter Rule Condition operations
+	CreateParameterRuleCondition(ctx context.Context, condition *model.ParameterRuleCondition) error
+	GetParameterRuleConditionsByRuleID(ctx context.Context, ruleID uint) ([]*model.ParameterRuleCondition, error)
+	DeleteParameterRuleConditionsByRuleID(ctx context.Context, ruleID uint) error
+
+	// Parameter Condition operations (legacy)
+	CreateParameterCondition(ctx context.Context, condition *model.ParameterCondition) error
+	GetParameterConditionsByParameterID(ctx context.Context, parameterID uint) ([]*model.ParameterCondition, error)
+	DeleteParameterConditionsByParameterID(ctx context.Context, parameterID uint) error
 }
 
 // repository implements Repository

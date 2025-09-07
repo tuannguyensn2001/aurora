@@ -105,6 +105,64 @@ func MakeHTTPHandler(endpoints Endpoints) http.Handler {
 		options...,
 	))
 
+	// Parameter routes - matching NestJS controller paths with api prefix
+	r.Methods("POST").Path("/api/v1/parameters").Handler(httptransport.NewServer(
+		endpoints.CreateParameter,
+		decodeCreateParameterRequest,
+		encodeCreatedResponse,
+		options...,
+	))
+
+	r.Methods("GET").Path("/api/v1/parameters").Handler(httptransport.NewServer(
+		endpoints.GetAllParameters,
+		decodeGetAllParametersRequest,
+		encodeResponse,
+		options...,
+	))
+
+	r.Methods("GET").Path("/api/v1/parameters/{id}").Handler(httptransport.NewServer(
+		endpoints.GetParameterByID,
+		decodeGetParameterByIDRequest,
+		encodeResponse,
+		options...,
+	))
+
+	r.Methods("PATCH").Path("/api/v1/parameters/{id}").Handler(httptransport.NewServer(
+		endpoints.UpdateParameter,
+		decodeUpdateParameterRequest,
+		encodeResponse,
+		options...,
+	))
+
+	r.Methods("DELETE").Path("/api/v1/parameters/{id}").Handler(httptransport.NewServer(
+		endpoints.DeleteParameter,
+		decodeDeleteParameterRequest,
+		encodeNoContentResponse,
+		options...,
+	))
+
+	// Parameter rule management endpoints
+	r.Methods("POST").Path("/api/v1/parameters/{id}/rules").Handler(httptransport.NewServer(
+		endpoints.AddParameterRule,
+		decodeAddParameterRuleRequest,
+		encodeResponse,
+		options...,
+	))
+
+	r.Methods("PATCH").Path("/api/v1/parameters/{id}/rules/{ruleId}").Handler(httptransport.NewServer(
+		endpoints.UpdateParameterRule,
+		decodeUpdateParameterRuleRequest,
+		encodeResponse,
+		options...,
+	))
+
+	r.Methods("DELETE").Path("/api/v1/parameters/{id}/rules/{ruleId}").Handler(httptransport.NewServer(
+		endpoints.DeleteParameterRule,
+		decodeDeleteParameterRuleRequest,
+		encodeResponse,
+		options...,
+	))
+
 	return r
 }
 
@@ -275,4 +333,97 @@ func decodeDeleteSegmentRequest(ctx context.Context, r *http.Request) (interface
 		return nil, err
 	}
 	return DeleteSegmentRequest{ID: id}, nil
+}
+
+// Parameter decode functions
+func decodeCreateParameterRequest(ctx context.Context, r *http.Request) (interface{}, error) {
+	var req dto.CreateParameterRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return nil, err
+	}
+	return CreateParameterRequest{Request: req}, nil
+}
+
+func decodeGetAllParametersRequest(ctx context.Context, r *http.Request) (interface{}, error) {
+	return GetAllParametersRequest{}, nil
+}
+
+func decodeGetParameterByIDRequest(ctx context.Context, r *http.Request) (interface{}, error) {
+	vars := mux.Vars(r)
+	id, err := ParseID(vars["id"])
+	if err != nil {
+		return nil, err
+	}
+	return GetParameterByIDRequest{ID: id}, nil
+}
+
+func decodeUpdateParameterRequest(ctx context.Context, r *http.Request) (interface{}, error) {
+	vars := mux.Vars(r)
+	id, err := ParseID(vars["id"])
+	if err != nil {
+		return nil, err
+	}
+
+	var req dto.UpdateParameterRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return nil, err
+	}
+
+	return UpdateParameterRequest{ID: id, Request: req}, nil
+}
+
+func decodeDeleteParameterRequest(ctx context.Context, r *http.Request) (interface{}, error) {
+	vars := mux.Vars(r)
+	id, err := ParseID(vars["id"])
+	if err != nil {
+		return nil, err
+	}
+	return DeleteParameterRequest{ID: id}, nil
+}
+
+func decodeAddParameterRuleRequest(ctx context.Context, r *http.Request) (interface{}, error) {
+	vars := mux.Vars(r)
+	id, err := ParseID(vars["id"])
+	if err != nil {
+		return nil, err
+	}
+
+	var req dto.CreateParameterRuleRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return nil, err
+	}
+
+	return AddParameterRuleRequest{ID: id, Request: req}, nil
+}
+
+func decodeUpdateParameterRuleRequest(ctx context.Context, r *http.Request) (interface{}, error) {
+	vars := mux.Vars(r)
+	id, err := ParseID(vars["id"])
+	if err != nil {
+		return nil, err
+	}
+	ruleID, err := ParseID(vars["ruleId"])
+	if err != nil {
+		return nil, err
+	}
+
+	var req dto.UpdateParameterRuleRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return nil, err
+	}
+
+	return UpdateParameterRuleRequest{ID: id, RuleID: ruleID, Request: req}, nil
+}
+
+func decodeDeleteParameterRuleRequest(ctx context.Context, r *http.Request) (interface{}, error) {
+	vars := mux.Vars(r)
+	id, err := ParseID(vars["id"])
+	if err != nil {
+		return nil, err
+	}
+	ruleID, err := ParseID(vars["ruleId"])
+	if err != nil {
+		return nil, err
+	}
+	return DeleteParameterRuleRequest{ID: id, RuleID: ruleID}, nil
 }

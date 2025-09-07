@@ -208,3 +208,126 @@ func (h *Handler) DeleteSegment(ctx context.Context, id uint) error {
 
 	return nil
 }
+
+// CreateParameter handles the business logic for creating a parameter
+func (h *Handler) CreateParameter(ctx context.Context, req *dto.CreateParameterRequest) (*dto.ParameterResponse, error) {
+	logger := log.Ctx(ctx).With().Str("handler", "create-parameter").Logger()
+	logger.Info().Msg("Creating parameter")
+
+	parameter, err := h.service.CreateParameter(ctx, req)
+	if err != nil {
+		logger.Error().Err(err).Msg("Failed to create parameter")
+		return nil, err
+	}
+
+	response := dto.ToParameterResponse(parameter)
+	return &response, nil
+}
+
+// GetAllParameters handles the business logic for getting all parameters
+func (h *Handler) GetAllParameters(ctx context.Context) ([]dto.ParameterResponse, error) {
+	logger := log.Ctx(ctx).With().Str("handler", "get-all-parameters").Logger()
+	logger.Info().Msg("Getting all parameters")
+
+	parameters, err := h.service.GetAllParameters(ctx)
+	if err != nil {
+		logger.Error().Err(err).Msg("Failed to get all parameters")
+		return nil, err
+	}
+
+	responses := make([]dto.ParameterResponse, len(parameters))
+	for i, parameter := range parameters {
+		responses[i] = dto.ToParameterResponse(parameter)
+	}
+
+	return responses, nil
+}
+
+// GetParameterByID handles the business logic for getting a parameter by ID
+func (h *Handler) GetParameterByID(ctx context.Context, id uint) (*dto.ParameterResponse, error) {
+	logger := log.Ctx(ctx).With().Str("handler", "get-parameter-by-id").Uint("id", id).Logger()
+	logger.Info().Msg("Getting parameter by ID")
+
+	parameter, err := h.service.GetParameterByID(ctx, id)
+	if err != nil {
+		logger.Error().Err(err).Uint("id", id).Msg("Failed to get parameter by ID")
+		return nil, err
+	}
+
+	response := dto.ToParameterResponse(parameter)
+	return &response, nil
+}
+
+// UpdateParameter handles the business logic for updating a parameter
+func (h *Handler) UpdateParameter(ctx context.Context, id uint, req *dto.UpdateParameterRequest) (*dto.ParameterResponse, error) {
+	logger := log.Ctx(ctx).With().Str("handler", "update-parameter").Uint("id", id).Logger()
+	logger.Info().Msg("Updating parameter")
+
+	parameter, err := h.service.UpdateParameter(ctx, id, req)
+	if err != nil {
+		logger.Error().Err(err).Uint("id", id).Msg("Failed to update parameter")
+		return nil, err
+	}
+
+	response := dto.ToParameterResponse(parameter)
+	return &response, nil
+}
+
+// DeleteParameter handles the business logic for deleting a parameter
+func (h *Handler) DeleteParameter(ctx context.Context, id uint) error {
+	logger := log.Ctx(ctx).With().Str("handler", "delete-parameter").Uint("id", id).Logger()
+	logger.Info().Msg("Deleting parameter")
+
+	err := h.service.DeleteParameter(ctx, id)
+	if err != nil {
+		logger.Error().Err(err).Uint("id", id).Msg("Failed to delete parameter")
+		return err
+	}
+
+	return nil
+}
+
+// AddParameterRule handles the business logic for adding a rule to a parameter
+func (h *Handler) AddParameterRule(ctx context.Context, id uint, req *dto.CreateParameterRuleRequest) (*dto.ParameterResponse, error) {
+	logger := log.Ctx(ctx).With().Str("handler", "add-parameter-rule").Uint("id", id).Logger()
+	logger.Info().Msg("Adding parameter rule")
+
+	parameter, err := h.service.AddParameterRule(ctx, id, req)
+	if err != nil {
+		logger.Error().Err(err).Uint("id", id).Msg("Failed to add parameter rule")
+		return nil, err
+	}
+
+	response := dto.ToParameterResponse(parameter)
+	return &response, nil
+}
+
+// UpdateParameterRule handles the business logic for updating a parameter rule
+func (h *Handler) UpdateParameterRule(ctx context.Context, id uint, ruleID uint, req *dto.UpdateParameterRuleRequest) (*dto.ParameterResponse, error) {
+	logger := log.Ctx(ctx).With().Str("handler", "update-parameter-rule").Uint("id", id).Uint("ruleId", ruleID).Logger()
+	logger.Info().Msg("Updating parameter rule")
+
+	parameter, err := h.service.UpdateParameterRule(ctx, id, ruleID, req)
+	if err != nil {
+		logger.Error().Err(err).Uint("id", id).Uint("ruleId", ruleID).Msg("Failed to update parameter rule")
+		return nil, err
+	}
+
+	response := dto.ToParameterResponse(parameter)
+	return &response, nil
+}
+
+// DeleteParameterRule handles the business logic for deleting a parameter rule
+func (h *Handler) DeleteParameterRule(ctx context.Context, id uint, ruleID uint) (*dto.ParameterResponse, error) {
+	logger := log.Ctx(ctx).With().Str("handler", "delete-parameter-rule").Uint("id", id).Uint("ruleId", ruleID).Logger()
+	logger.Info().Msg("Deleting parameter rule")
+
+	parameter, err := h.service.DeleteParameterRule(ctx, id, ruleID)
+	if err != nil {
+		logger.Error().Err(err).Uint("id", id).Uint("ruleId", ruleID).Msg("Failed to delete parameter rule")
+		return nil, err
+	}
+
+	response := dto.ToParameterResponse(parameter)
+	return &response, nil
+}

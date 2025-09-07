@@ -24,6 +24,14 @@ type Endpoints struct {
 	GetSegmentByID               endpoint.Endpoint
 	UpdateSegment                endpoint.Endpoint
 	DeleteSegment                endpoint.Endpoint
+	CreateParameter              endpoint.Endpoint
+	GetAllParameters             endpoint.Endpoint
+	GetParameterByID             endpoint.Endpoint
+	UpdateParameter              endpoint.Endpoint
+	DeleteParameter              endpoint.Endpoint
+	AddParameterRule             endpoint.Endpoint
+	UpdateParameterRule          endpoint.Endpoint
+	DeleteParameterRule          endpoint.Endpoint
 }
 
 // MakeEndpoints creates all endpoints
@@ -41,6 +49,14 @@ func MakeEndpoints(h *handler.Handler) Endpoints {
 		GetSegmentByID:               makeGetSegmentByIDEndpoint(h),
 		UpdateSegment:                makeUpdateSegmentEndpoint(h),
 		DeleteSegment:                makeDeleteSegmentEndpoint(h),
+		CreateParameter:              makeCreateParameterEndpoint(h),
+		GetAllParameters:             makeGetAllParametersEndpoint(h),
+		GetParameterByID:             makeGetParameterByIDEndpoint(h),
+		UpdateParameter:              makeUpdateParameterEndpoint(h),
+		DeleteParameter:              makeDeleteParameterEndpoint(h),
+		AddParameterRule:             makeAddParameterRuleEndpoint(h),
+		UpdateParameterRule:          makeUpdateParameterRuleEndpoint(h),
+		DeleteParameterRule:          makeDeleteParameterRuleEndpoint(h),
 	}
 }
 
@@ -185,6 +201,107 @@ func makeDeleteSegmentEndpoint(h *handler.Handler) endpoint.Endpoint {
 		req := request.(DeleteSegmentRequest)
 		err := h.DeleteSegment(ctx, req.ID)
 		return nil, err
+	}
+}
+
+// Parameter endpoint requests and implementations
+
+// CreateParameterRequest represents the endpoint request
+type CreateParameterRequest struct {
+	Request dto.CreateParameterRequest `json:"request"`
+}
+
+func makeCreateParameterEndpoint(h *handler.Handler) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(CreateParameterRequest)
+		return h.CreateParameter(ctx, &req.Request)
+	}
+}
+
+// GetAllParametersRequest represents the endpoint request
+type GetAllParametersRequest struct{}
+
+func makeGetAllParametersEndpoint(h *handler.Handler) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		return h.GetAllParameters(ctx)
+	}
+}
+
+// GetParameterByIDRequest represents the endpoint request
+type GetParameterByIDRequest struct {
+	ID uint `json:"id"`
+}
+
+func makeGetParameterByIDEndpoint(h *handler.Handler) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(GetParameterByIDRequest)
+		return h.GetParameterByID(ctx, req.ID)
+	}
+}
+
+// UpdateParameterRequest represents the endpoint request
+type UpdateParameterRequest struct {
+	ID      uint                       `json:"id"`
+	Request dto.UpdateParameterRequest `json:"request"`
+}
+
+func makeUpdateParameterEndpoint(h *handler.Handler) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(UpdateParameterRequest)
+		return h.UpdateParameter(ctx, req.ID, &req.Request)
+	}
+}
+
+// DeleteParameterRequest represents the endpoint request
+type DeleteParameterRequest struct {
+	ID uint `json:"id"`
+}
+
+func makeDeleteParameterEndpoint(h *handler.Handler) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(DeleteParameterRequest)
+		err := h.DeleteParameter(ctx, req.ID)
+		return nil, err
+	}
+}
+
+// AddParameterRuleRequest represents the endpoint request
+type AddParameterRuleRequest struct {
+	ID      uint                           `json:"id"`
+	Request dto.CreateParameterRuleRequest `json:"request"`
+}
+
+func makeAddParameterRuleEndpoint(h *handler.Handler) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(AddParameterRuleRequest)
+		return h.AddParameterRule(ctx, req.ID, &req.Request)
+	}
+}
+
+// UpdateParameterRuleRequest represents the endpoint request
+type UpdateParameterRuleRequest struct {
+	ID      uint                           `json:"id"`
+	RuleID  uint                           `json:"ruleId"`
+	Request dto.UpdateParameterRuleRequest `json:"request"`
+}
+
+func makeUpdateParameterRuleEndpoint(h *handler.Handler) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(UpdateParameterRuleRequest)
+		return h.UpdateParameterRule(ctx, req.ID, req.RuleID, &req.Request)
+	}
+}
+
+// DeleteParameterRuleRequest represents the endpoint request
+type DeleteParameterRuleRequest struct {
+	ID     uint `json:"id"`
+	RuleID uint `json:"ruleId"`
+}
+
+func makeDeleteParameterRuleEndpoint(h *handler.Handler) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(DeleteParameterRuleRequest)
+		return h.DeleteParameterRule(ctx, req.ID, req.RuleID)
 	}
 }
 

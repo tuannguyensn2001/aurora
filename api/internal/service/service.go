@@ -26,6 +26,19 @@ type Service interface {
 	GetAllSegments(ctx context.Context) ([]*model.Segment, error)
 	UpdateSegment(ctx context.Context, id uint, req *dto.UpdateSegmentRequest) (*model.Segment, error)
 	DeleteSegment(ctx context.Context, id uint) error
+
+	// Parameter operations
+	CreateParameter(ctx context.Context, req *dto.CreateParameterRequest) (*model.Parameter, error)
+	GetParameterByID(ctx context.Context, id uint) (*model.Parameter, error)
+	GetParameterByName(ctx context.Context, name string) (*model.Parameter, error)
+	GetAllParameters(ctx context.Context) ([]*model.Parameter, error)
+	UpdateParameter(ctx context.Context, id uint, req *dto.UpdateParameterRequest) (*model.Parameter, error)
+	DeleteParameter(ctx context.Context, id uint) error
+	AddParameterRule(ctx context.Context, parameterID uint, req *dto.CreateParameterRuleRequest) (*model.Parameter, error)
+	UpdateParameterRule(ctx context.Context, parameterID uint, ruleID uint, req *dto.UpdateParameterRuleRequest) (*model.Parameter, error)
+	DeleteParameterRule(ctx context.Context, parameterID uint, ruleID uint) (*model.Parameter, error)
+	IncrementParameterUsageCount(ctx context.Context, id uint) error
+	DecrementParameterUsageCount(ctx context.Context, id uint) error
 }
 
 // service implements Service
