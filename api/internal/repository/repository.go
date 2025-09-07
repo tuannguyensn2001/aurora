@@ -68,6 +68,9 @@ type Repository interface {
 	CreateParameterCondition(ctx context.Context, condition *model.ParameterCondition) error
 	GetParameterConditionsByParameterID(ctx context.Context, parameterID uint) ([]*model.ParameterCondition, error)
 	DeleteParameterConditionsByParameterID(ctx context.Context, parameterID uint) error
+
+	// Database access for transactions
+	GetDB() *gorm.DB
 }
 
 // repository implements Repository
@@ -80,6 +83,11 @@ func New(db *gorm.DB) Repository {
 	return &repository{
 		db: db,
 	}
+}
+
+// GetDB returns the underlying GORM database instance
+func (r *repository) GetDB() *gorm.DB {
+	return r.db
 }
 
 // CreateAttribute creates a new attribute

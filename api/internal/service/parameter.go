@@ -3,6 +3,7 @@ package service
 import (
 	"api/internal/dto"
 	"api/internal/model"
+	"api/internal/repository"
 	"context"
 	"errors"
 	"fmt"
@@ -151,131 +152,137 @@ func (s *service) UpdateParameter(ctx context.Context, id uint, req *dto.UpdateP
 
 // UpdateParameterWithRules updates a parameter and completely replaces all its rules
 func (s *service) UpdateParameterWithRules(ctx context.Context, id uint, req *dto.UpdateParameterWithRulesRequest) (*model.Parameter, error) {
-	parameter, err := s.GetParameterByID(ctx, id)
-	if err != nil {
-		return nil, err
-	}
-
-	// Check if name is being updated and if it conflicts
-	if req.Name != nil && *req.Name != parameter.Name {
-		existing, err := s.repo.GetParameterByName(ctx, *req.Name)
-		if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+	// Use database transaction to ensure atomicity
+	return s.withTransaction(ctx, func(txRepo repository.Repository) (*model.Parameter, error) {
+		parameter, err := txRepo.GetParameterByID(ctx, id)
+		if err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return nil, fmt.Errorf("parameter with ID %d not found", id)
+			}
 			return nil, err
 		}
-		if existing != nil {
-			return nil, errors.New("parameter with name '" + *req.Name + "' already exists")
+
+		// Check if name is being updated and if it conflicts
+		if req.Name != nil && *req.Name != parameter.Name {
+			existing, err := txRepo.GetParameterByName(ctx, *req.Name)
+			if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+				return nil, err
+			}
+			if existing != nil {
+				return nil, errors.New("parameter with name '" + *req.Name + "' already exists")
+			}
+			parameter.Name = *req.Name
 		}
-		parameter.Name = *req.Name
-	}
 
-	// Update description if provided
-	if req.Description != nil {
-		parameter.Description = *req.Description
-	}
-
-	// Determine the final data type for validation
-	finalDataType := parameter.DataType
-	if req.DataType != nil {
-		finalDataType = *req.DataType
-	}
-
-	// Validate default rollout value if being updated
-	if req.DefaultRolloutValue != nil {
-		if err := s.validateParameterValue(req.DefaultRolloutValue, finalDataType); err != nil {
-			return nil, err
+		// Update description if provided
+		if req.Description != nil {
+			parameter.Description = *req.Description
 		}
-		parameter.DefaultRolloutValue = model.RolloutValue{
-			Data: req.DefaultRolloutValue,
-		}
-	}
 
-	// If data type is being changed, validate all existing condition values
-	if req.DataType != nil && *req.DataType != parameter.DataType {
-		for _, condition := range parameter.Conditions {
-			if err := s.validateParameterValue(condition.RolloutValue.Data, *req.DataType); err != nil {
-				return nil, fmt.Errorf("existing condition rollout value is invalid for new data type: %v", err)
+		// Determine the final data type for validation
+		finalDataType := parameter.DataType
+		if req.DataType != nil {
+			finalDataType = *req.DataType
+		}
+
+		// Validate default rollout value if being updated
+		if req.DefaultRolloutValue != nil {
+			if err := s.validateParameterValue(req.DefaultRolloutValue, finalDataType); err != nil {
+				return nil, err
+			}
+			parameter.DefaultRolloutValue = model.RolloutValue{
+				Data: req.DefaultRolloutValue,
 			}
 		}
-		parameter.DataType = *req.DataType
-	}
 
-	// Update parameter metadata first
-	if err := s.repo.UpdateParameter(ctx, parameter); err != nil {
-		return nil, err
-	}
-
-	// Handle rules replacement if provided
-	if req.Rules != nil {
-		// Delete all existing rules for this parameter
-		if err := s.repo.DeleteParameterRulesByParameterID(ctx, id); err != nil {
-			return nil, fmt.Errorf("failed to delete existing rules: %v", err)
-		}
-
-		// Create new rules
-		for _, ruleReq := range req.Rules {
-			// Validate rollout value for the rule
-			if err := s.validateParameterValue(ruleReq.RolloutValue, finalDataType); err != nil {
-				return nil, fmt.Errorf("invalid rollout value for rule '%s': %v", ruleReq.Name, err)
-			}
-
-			rule := &model.ParameterRule{
-				Name:         ruleReq.Name,
-				Description:  ruleReq.Description,
-				Type:         ruleReq.Type,
-				ParameterID:  id,
-				RolloutValue: model.RolloutValue{Data: ruleReq.RolloutValue},
-				SegmentID:    ruleReq.SegmentID,
-				MatchType:    ruleReq.MatchType,
-			}
-
-			// Validate segment-based rule requirements
-			if ruleReq.Type == model.RuleTypeSegment {
-				if ruleReq.SegmentID == nil || ruleReq.MatchType == nil {
-					return nil, fmt.Errorf("segment ID and match type are required for segment-based rule '%s'", ruleReq.Name)
+		// If data type is being changed, validate all existing condition values
+		if req.DataType != nil && *req.DataType != parameter.DataType {
+			for _, condition := range parameter.Conditions {
+				if err := s.validateParameterValue(condition.RolloutValue.Data, *req.DataType); err != nil {
+					return nil, fmt.Errorf("existing condition rollout value is invalid for new data type: %v", err)
 				}
-				// Validate that segment exists
-				_, err := s.repo.GetSegmentByID(ctx, *ruleReq.SegmentID)
-				if err != nil {
-					if errors.Is(err, gorm.ErrRecordNotFound) {
-						return nil, fmt.Errorf("segment with ID %d not found for rule '%s'", *ruleReq.SegmentID, ruleReq.Name)
+			}
+			parameter.DataType = *req.DataType
+		}
+
+		// Update parameter metadata first
+		if err := txRepo.UpdateParameter(ctx, parameter); err != nil {
+			return nil, err
+		}
+
+		// Handle rules replacement if provided
+		if req.Rules != nil {
+			// Delete all existing rules for this parameter
+			if err := txRepo.DeleteParameterRulesByParameterID(ctx, id); err != nil {
+				return nil, fmt.Errorf("failed to delete existing rules: %v", err)
+			}
+
+			// Create new rules
+			for _, ruleReq := range req.Rules {
+				// Validate rollout value for the rule
+				if err := s.validateParameterValue(ruleReq.RolloutValue, finalDataType); err != nil {
+					return nil, fmt.Errorf("invalid rollout value for rule '%s': %v", ruleReq.Name, err)
+				}
+
+				rule := &model.ParameterRule{
+					Name:         ruleReq.Name,
+					Description:  ruleReq.Description,
+					Type:         ruleReq.Type,
+					ParameterID:  id,
+					RolloutValue: model.RolloutValue{Data: ruleReq.RolloutValue},
+					SegmentID:    ruleReq.SegmentID,
+					MatchType:    ruleReq.MatchType,
+				}
+
+				// Validate segment-based rule requirements
+				if ruleReq.Type == model.RuleTypeSegment {
+					if ruleReq.SegmentID == nil || ruleReq.MatchType == nil {
+						return nil, fmt.Errorf("segment ID and match type are required for segment-based rule '%s'", ruleReq.Name)
 					}
-					return nil, err
-				}
-			}
-
-			// Create the rule
-			if err := s.repo.CreateParameterRule(ctx, rule); err != nil {
-				return nil, fmt.Errorf("failed to create rule '%s': %v", ruleReq.Name, err)
-			}
-
-			// Add conditions if it's an attribute-based rule
-			if ruleReq.Type == model.RuleTypeAttribute && len(ruleReq.Conditions) > 0 {
-				for _, conditionReq := range ruleReq.Conditions {
-					// Validate that attribute exists
-					_, err := s.repo.GetAttributeByID(ctx, conditionReq.AttributeID)
+					// Validate that segment exists
+					_, err := txRepo.GetSegmentByID(ctx, *ruleReq.SegmentID)
 					if err != nil {
 						if errors.Is(err, gorm.ErrRecordNotFound) {
-							return nil, fmt.Errorf("attribute with ID %d not found for rule '%s'", conditionReq.AttributeID, ruleReq.Name)
+							return nil, fmt.Errorf("segment with ID %d not found for rule '%s'", *ruleReq.SegmentID, ruleReq.Name)
 						}
 						return nil, err
 					}
+				}
 
-					condition := &model.ParameterRuleCondition{
-						RuleID:      rule.ID,
-						AttributeID: conditionReq.AttributeID,
-						Operator:    conditionReq.Operator,
-						Value:       conditionReq.Value,
-					}
-					if err := s.repo.CreateParameterRuleCondition(ctx, condition); err != nil {
-						return nil, fmt.Errorf("failed to create condition for rule '%s': %v", ruleReq.Name, err)
+				// Create the rule
+				if err := txRepo.CreateParameterRule(ctx, rule); err != nil {
+					return nil, fmt.Errorf("failed to create rule '%s': %v", ruleReq.Name, err)
+				}
+
+				// Add conditions if it's an attribute-based rule
+				if ruleReq.Type == model.RuleTypeAttribute && len(ruleReq.Conditions) > 0 {
+					for _, conditionReq := range ruleReq.Conditions {
+						// Validate that attribute exists
+						_, err := txRepo.GetAttributeByID(ctx, conditionReq.AttributeID)
+						if err != nil {
+							if errors.Is(err, gorm.ErrRecordNotFound) {
+								return nil, fmt.Errorf("attribute with ID %d not found for rule '%s'", conditionReq.AttributeID, ruleReq.Name)
+							}
+							return nil, err
+						}
+
+						condition := &model.ParameterRuleCondition{
+							RuleID:      rule.ID,
+							AttributeID: conditionReq.AttributeID,
+							Operator:    conditionReq.Operator,
+							Value:       conditionReq.Value,
+						}
+						if err := txRepo.CreateParameterRuleCondition(ctx, condition); err != nil {
+							return nil, fmt.Errorf("failed to create condition for rule '%s': %v", ruleReq.Name, err)
+						}
 					}
 				}
 			}
 		}
-	}
 
-	// Return updated parameter with all rules
-	return s.GetParameterByID(ctx, id)
+		// Return updated parameter with all rules
+		return txRepo.GetParameterByID(ctx, id)
+	})
 }
 
 // DeleteParameter deletes a parameter
@@ -561,4 +568,52 @@ func (s *service) validateParameterValue(value interface{}, dataType model.Param
 		return fmt.Errorf("unsupported parameter data type: %s", dataType)
 	}
 	return nil
+}
+
+// withTransaction executes a function within a database transaction
+func (s *service) withTransaction(ctx context.Context, fn func(repository.Repository) (*model.Parameter, error)) (*model.Parameter, error) {
+	// Get the underlying GORM DB from the repository
+	db := s.getDB()
+
+	// Start transaction
+	tx := db.WithContext(ctx).Begin()
+	if tx.Error != nil {
+		return nil, fmt.Errorf("failed to begin transaction: %w", tx.Error)
+	}
+
+	// Create a new repository instance with the transaction
+	txRepo := repository.New(tx)
+
+	// Execute the function with the transaction repository
+	result, err := fn(txRepo)
+	if err != nil {
+		// Rollback on error
+		if rollbackErr := tx.Rollback().Error; rollbackErr != nil {
+			return nil, fmt.Errorf("transaction failed: %v, rollback failed: %w", err, rollbackErr)
+		}
+		return nil, err
+	}
+
+	// Commit the transaction
+	if commitErr := tx.Commit().Error; commitErr != nil {
+		return nil, fmt.Errorf("failed to commit transaction: %w", commitErr)
+	}
+
+	return result, nil
+}
+
+// getDB extracts the underlying GORM DB from the repository
+func (s *service) getDB() *gorm.DB {
+	// This is a temporary solution - we need to expose the DB from the repository
+	// For now, we'll use reflection or add a method to the repository interface
+	type dbGetter interface {
+		GetDB() *gorm.DB
+	}
+
+	if getter, ok := s.repo.(dbGetter); ok {
+		return getter.GetDB()
+	}
+
+	// Fallback - this shouldn't happen in a well-designed system
+	panic("repository does not expose underlying database connection")
 }
