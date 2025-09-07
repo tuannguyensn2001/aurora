@@ -148,6 +148,14 @@ func MakeHTTPHandler(endpoints Endpoints) http.Handler {
 		options...,
 	))
 
+	// Experiment routes - matching NestJS controller paths with api prefix
+	r.Methods("POST").Path("/api/v1/experiments").Handler(httptransport.NewServer(
+		endpoints.CreateExperiment,
+		decodeCreateExperimentRequest,
+		encodeResponse,
+		options...,
+	))
+
 	return r
 }
 
@@ -383,4 +391,13 @@ func decodeDeleteParameterRequest(ctx context.Context, r *http.Request) (interfa
 		return nil, err
 	}
 	return DeleteParameterRequest{ID: id}, nil
+}
+
+// Experiment decode functions
+func decodeCreateExperimentRequest(ctx context.Context, r *http.Request) (interface{}, error) {
+	var req dto.CreateExperimentRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return nil, err
+	}
+	return CreateExperimentRequest{Request: req}, nil
 }

@@ -40,6 +40,9 @@ type Service interface {
 	DeleteParameterRule(ctx context.Context, parameterID uint, ruleID uint) (*model.Parameter, error)
 	IncrementParameterUsageCount(ctx context.Context, id uint) error
 	DecrementParameterUsageCount(ctx context.Context, id uint) error
+
+	// Experiment operations
+	CreateExperiment(ctx context.Context, req *dto.CreateExperimentRequest) (string, error)
 }
 
 // service implements Service

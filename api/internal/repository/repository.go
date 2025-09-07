@@ -50,6 +50,7 @@ type Repository interface {
 	IncrementParameterUsageCount(ctx context.Context, id uint) error
 	DecrementParameterUsageCount(ctx context.Context, id uint) error
 	CountParameters(ctx context.Context) (int64, error)
+	GetParametersByIDs(ctx context.Context, ids []int) ([]model.Parameter, error)
 
 	// Parameter Rule operations
 	CreateParameterRule(ctx context.Context, rule *model.ParameterRule) error
@@ -68,6 +69,26 @@ type Repository interface {
 	CreateParameterCondition(ctx context.Context, condition *model.ParameterCondition) error
 	GetParameterConditionsByParameterID(ctx context.Context, parameterID uint) ([]*model.ParameterCondition, error)
 	DeleteParameterConditionsByParameterID(ctx context.Context, parameterID uint) error
+
+	// Experiment operations
+	CreateExperiment(ctx context.Context, experiment *model.Experiment) error
+	GetExperimentByID(ctx context.Context, id uint) (*model.Experiment, error)
+	GetExperimentByUuid(ctx context.Context, uuid string) (*model.Experiment, error)
+	GetAllExperiments(ctx context.Context, limit, offset int) ([]*model.Experiment, error)
+	UpdateExperiment(ctx context.Context, experiment *model.Experiment) error
+	DeleteExperiment(ctx context.Context, id uint) error
+	CountExperiments(ctx context.Context) (int64, error)
+
+	// Experiment Variant operations
+	CreateExperimentVariant(ctx context.Context, variant *model.ExperimentVariant) error
+	GetExperimentVariantsByExperimentID(ctx context.Context, experimentID uint) ([]*model.ExperimentVariant, error)
+	DeleteExperimentVariantsByExperimentID(ctx context.Context, experimentID uint) error
+
+	// Experiment Variant Parameter operations
+	CreateExperimentVariantParameter(ctx context.Context, parameter *model.ExperimentVariantParameter) error
+	GetExperimentVariantParametersByVariantID(ctx context.Context, variantID uint) ([]*model.ExperimentVariantParameter, error)
+	GetExperimentVariantParametersByExperimentID(ctx context.Context, experimentID uint) ([]*model.ExperimentVariantParameter, error)
+	DeleteExperimentVariantParametersByVariantID(ctx context.Context, variantID uint) error
 
 	// Database access for transactions
 	GetDB() *gorm.DB

@@ -346,3 +346,18 @@ func (h *Handler) DeleteParameterRule(ctx context.Context, id uint, ruleID uint)
 	response := dto.ToParameterResponse(parameter)
 	return &response, nil
 }
+
+// CreateExperiment handles the business logic for creating an experiment
+func (h *Handler) CreateExperiment(ctx context.Context, req *dto.CreateExperimentRequest) (string, error) {
+	logger := log.Ctx(ctx).With().Str("handler", "create-experiment").Logger()
+	logger.Info().Msg("Creating experiment")
+
+	message, err := h.service.CreateExperiment(ctx, req)
+	if err != nil {
+		logger.Error().Err(err).Msg("Failed to create experiment")
+		return "", err
+	}
+
+	logger.Info().Msg("Experiment created successfully")
+	return message, nil
+}

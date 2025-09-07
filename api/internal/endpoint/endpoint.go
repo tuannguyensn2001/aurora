@@ -33,6 +33,7 @@ type Endpoints struct {
 	AddParameterRule             endpoint.Endpoint
 	UpdateParameterRule          endpoint.Endpoint
 	DeleteParameterRule          endpoint.Endpoint
+	CreateExperiment             endpoint.Endpoint
 }
 
 // MakeEndpoints creates all endpoints
@@ -59,6 +60,7 @@ func MakeEndpoints(h *handler.Handler) Endpoints {
 		AddParameterRule:             makeAddParameterRuleEndpoint(h),
 		UpdateParameterRule:          makeUpdateParameterRuleEndpoint(h),
 		DeleteParameterRule:          makeDeleteParameterRuleEndpoint(h),
+		CreateExperiment:             makeCreateExperimentEndpoint(h),
 	}
 }
 
@@ -317,6 +319,18 @@ func makeDeleteParameterRuleEndpoint(h *handler.Handler) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(DeleteParameterRuleRequest)
 		return h.DeleteParameterRule(ctx, req.ID, req.RuleID)
+	}
+}
+
+// CreateExperimentRequest represents the endpoint request
+type CreateExperimentRequest struct {
+	Request dto.CreateExperimentRequest `json:"request"`
+}
+
+func makeCreateExperimentEndpoint(h *handler.Handler) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(CreateExperimentRequest)
+		return h.CreateExperiment(ctx, &req.Request)
 	}
 }
 

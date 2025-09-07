@@ -182,3 +182,9 @@ func (r *repository) GetParameterConditionsByParameterID(ctx context.Context, pa
 func (r *repository) DeleteParameterConditionsByParameterID(ctx context.Context, parameterID uint) error {
 	return r.db.WithContext(ctx).Where("parameter_id = ?", parameterID).Delete(&model.ParameterCondition{}).Error
 }
+
+func (r *repository) GetParametersByIDs(ctx context.Context, ids []int) ([]model.Parameter, error) {
+	var parameters []model.Parameter
+	err := r.db.WithContext(ctx).Where("id IN ?", ids).Find(&parameters).Error
+	return parameters, err
+}
