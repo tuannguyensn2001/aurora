@@ -204,6 +204,26 @@ func (s *service) GetExperimentByID(ctx context.Context, id uint) (*model.Experi
 		variantParametersMap[variant.ID] = parameters
 	}
 
+	if experiment.Status == "schedule" {
+		if experiment.StartDate < time.Now().Unix() {
+			experiment.Status = "running"
+			experiment.UpdatedAt = time.Now().Unix()
+			err = s.repo.UpdateExperiment(ctx, experiment)
+			if err != nil {
+				return nil, nil, nil, nil, fmt.Errorf("failed to update experiment: %w", err)
+			}
+		}
+	} else if experiment.Status == "running" {
+		if experiment.EndDate < time.Now().Unix() {
+			experiment.Status = "finish"
+			experiment.UpdatedAt = time.Now().Unix()
+			err = s.repo.UpdateExperiment(ctx, experiment)
+			if err != nil {
+				return nil, nil, nil, nil, fmt.Errorf("failed to update experiment: %w", err)
+			}
+		}
+	}
+
 	return experiment, variants, variantParametersMap, hashAttribute, nil
 }
 
@@ -234,6 +254,86 @@ func (s *service) RejectExperiment(ctx context.Context, id uint, req *dto.Reject
 
 	// Update the experiment status to cancel (reject)
 	experiment.Status = "cancel"
+	experiment.UpdatedAt = time.Now().Unix()
+
+	// Save the updated experiment
+	err = s.repo.UpdateExperiment(ctx, experiment)
+	if err != nil {
+		return nil, fmt.Errorf("failed to update experiment: %w", err)
+	}
+
+	return experiment, nil
+}
+
+// ApproveExperiment approves an experiment by updating its status to "approved"
+func (s *service) ApproveExperiment(ctx context.Context, id uint, req *dto.ApproveExperimentRequest) (*model.Experiment, error) {
+	// Get the experiment first to ensure it exists
+	experiment, err := s.repo.GetExperimentByID(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get experiment: %w", err)
+	}
+
+	// Check if experiment can be approved (business logic based on ExperimentStatus enum)
+	if experiment.Status == "cancel" {
+		return nil, fmt.Errorf("cannot approve a canceled experiment")
+	}
+
+	if experiment.Status == "abort" {
+		return nil, fmt.Errorf("cannot approve an aborted experiment")
+	}
+
+	if experiment.Status == "running" {
+		return nil, fmt.Errorf("experiment is already running")
+	}
+
+	if experiment.Status == "finish" {
+		return nil, fmt.Errorf("cannot approve a finished experiment")
+	}
+
+	if experiment.Status == "approved" {
+		return nil, fmt.Errorf("experiment is already approved")
+	}
+
+	// Update the experiment status to approved
+	experiment.Status = "schedule"
+	experiment.UpdatedAt = time.Now().Unix()
+
+	// Save the updated experiment
+	err = s.repo.UpdateExperiment(ctx, experiment)
+	if err != nil {
+		return nil, fmt.Errorf("failed to update experiment: %w", err)
+	}
+
+	return experiment, nil
+}
+
+// AbortExperiment aborts an experiment by updating its status to "abort"
+func (s *service) AbortExperiment(ctx context.Context, id uint, req *dto.AbortExperimentRequest) (*model.Experiment, error) {
+	// Get the experiment first to ensure it exists
+	experiment, err := s.repo.GetExperimentByID(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get experiment: %w", err)
+	}
+
+	// Check if experiment can be aborted (business logic based on ExperimentStatus enum)
+	if experiment.Status == "cancel" {
+		return nil, fmt.Errorf("cannot abort a canceled experiment")
+	}
+
+	if experiment.Status == "abort" {
+		return nil, fmt.Errorf("experiment is already aborted")
+	}
+
+	if experiment.Status == "finish" {
+		return nil, fmt.Errorf("cannot abort a finished experiment")
+	}
+
+	if experiment.Status == "draft" {
+		return nil, fmt.Errorf("cannot abort a draft experiment, reject it instead")
+	}
+
+	// Update the experiment status to abort
+	experiment.Status = "abort"
 	experiment.UpdatedAt = time.Now().Unix()
 
 	// Save the updated experiment

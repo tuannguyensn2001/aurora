@@ -410,3 +410,33 @@ func (h *Handler) RejectExperiment(ctx context.Context, id uint, req *dto.Reject
 	response := dto.ToExperimentResponse(experiment)
 	return &response, nil
 }
+
+// ApproveExperiment handles the business logic for approving an experiment
+func (h *Handler) ApproveExperiment(ctx context.Context, id uint, req *dto.ApproveExperimentRequest) (*dto.ExperimentResponse, error) {
+	logger := log.Ctx(ctx).With().Str("handler", "approve-experiment").Uint("id", id).Logger()
+	logger.Info().Msg("Approving experiment")
+
+	experiment, err := h.service.ApproveExperiment(ctx, id, req)
+	if err != nil {
+		logger.Error().Err(err).Uint("id", id).Msg("Failed to approve experiment")
+		return nil, err
+	}
+
+	response := dto.ToExperimentResponse(experiment)
+	return &response, nil
+}
+
+// AbortExperiment handles the business logic for aborting an experiment
+func (h *Handler) AbortExperiment(ctx context.Context, id uint, req *dto.AbortExperimentRequest) (*dto.ExperimentResponse, error) {
+	logger := log.Ctx(ctx).With().Str("handler", "abort-experiment").Uint("id", id).Logger()
+	logger.Info().Msg("Aborting experiment")
+
+	experiment, err := h.service.AbortExperiment(ctx, id, req)
+	if err != nil {
+		logger.Error().Err(err).Uint("id", id).Msg("Failed to abort experiment")
+		return nil, err
+	}
+
+	response := dto.ToExperimentResponse(experiment)
+	return &response, nil
+}

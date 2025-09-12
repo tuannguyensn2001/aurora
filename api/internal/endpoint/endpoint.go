@@ -37,6 +37,8 @@ type Endpoints struct {
 	GetAllExperiments            endpoint.Endpoint
 	GetExperimentByID            endpoint.Endpoint
 	RejectExperiment             endpoint.Endpoint
+	ApproveExperiment            endpoint.Endpoint
+	AbortExperiment              endpoint.Endpoint
 }
 
 // MakeEndpoints creates all endpoints
@@ -67,6 +69,8 @@ func MakeEndpoints(h *handler.Handler) Endpoints {
 		GetAllExperiments:            makeGetAllExperimentsEndpoint(h),
 		GetExperimentByID:            makeGetExperimentByIDEndpoint(h),
 		RejectExperiment:             makeRejectExperimentEndpoint(h),
+		ApproveExperiment:            makeApproveExperimentEndpoint(h),
+		AbortExperiment:              makeAbortExperimentEndpoint(h),
 	}
 }
 
@@ -371,6 +375,32 @@ func makeRejectExperimentEndpoint(h *handler.Handler) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(RejectExperimentRequest)
 		return h.RejectExperiment(ctx, req.ID, &req.Request)
+	}
+}
+
+// ApproveExperimentRequest represents the endpoint request
+type ApproveExperimentRequest struct {
+	ID      uint                         `json:"id"`
+	Request dto.ApproveExperimentRequest `json:"request"`
+}
+
+func makeApproveExperimentEndpoint(h *handler.Handler) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(ApproveExperimentRequest)
+		return h.ApproveExperiment(ctx, req.ID, &req.Request)
+	}
+}
+
+// AbortExperimentRequest represents the endpoint request
+type AbortExperimentRequest struct {
+	ID      uint                       `json:"id"`
+	Request dto.AbortExperimentRequest `json:"request"`
+}
+
+func makeAbortExperimentEndpoint(h *handler.Handler) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(AbortExperimentRequest)
+		return h.AbortExperiment(ctx, req.ID, &req.Request)
 	}
 }
 

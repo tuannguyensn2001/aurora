@@ -219,3 +219,13 @@ func ToExperimentDetailResponse(experiment *model.Experiment, variants []*model.
 type RejectExperimentRequest struct {
 	Reason string `json:"reason,omitempty"` // Optional reason for rejection
 }
+
+// ApproveExperimentRequest represents the request to approve an experiment
+type ApproveExperimentRequest struct {
+	Notes string `json:"notes,omitempty"` // Optional notes for approval
+}
+
+// AbortExperimentRequest represents the request to abort an experiment
+type AbortExperimentRequest struct {
+	Reason string `json:"reason,omitempty"` // Optional reason for aborting
+}

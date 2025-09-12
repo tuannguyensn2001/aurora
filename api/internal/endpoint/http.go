@@ -177,6 +177,20 @@ func MakeHTTPHandler(endpoints Endpoints) http.Handler {
 		options...,
 	))
 
+	r.Methods("PATCH").Path("/api/v1/experiments/{id}/approve").Handler(httptransport.NewServer(
+		endpoints.ApproveExperiment,
+		decodeApproveExperimentRequest,
+		encodeResponse,
+		options...,
+	))
+
+	r.Methods("PATCH").Path("/api/v1/experiments/{id}/abort").Handler(httptransport.NewServer(
+		endpoints.AbortExperiment,
+		decodeAbortExperimentRequest,
+		encodeResponse,
+		options...,
+	))
+
 	return r
 }
 
@@ -449,4 +463,34 @@ func decodeRejectExperimentRequest(ctx context.Context, r *http.Request) (interf
 	}
 
 	return RejectExperimentRequest{ID: id, Request: req}, nil
+}
+
+func decodeApproveExperimentRequest(ctx context.Context, r *http.Request) (interface{}, error) {
+	vars := mux.Vars(r)
+	id, err := ParseID(vars["id"])
+	if err != nil {
+		return nil, err
+	}
+
+	var req dto.ApproveExperimentRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return nil, err
+	}
+
+	return ApproveExperimentRequest{ID: id, Request: req}, nil
+}
+
+func decodeAbortExperimentRequest(ctx context.Context, r *http.Request) (interface{}, error) {
+	vars := mux.Vars(r)
+	id, err := ParseID(vars["id"])
+	if err != nil {
+		return nil, err
+	}
+
+	var req dto.AbortExperimentRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return nil, err
+	}
+
+	return AbortExperimentRequest{ID: id, Request: req}, nil
 }
