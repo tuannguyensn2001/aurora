@@ -4,10 +4,12 @@ import (
 	"api/internal/dto"
 	"api/internal/model"
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 // CreateExperiment creates a new experiment with its variants and parameters
@@ -78,6 +80,14 @@ func (s *service) CreateExperiment(ctx context.Context, req *dto.CreateExperimen
 		}
 	}
 
+	exp, err := s.repo.GetExperimentByName(ctx, req.Name)
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		return "", err
+	}
+
+	if exp != nil {
+		return "", fmt.Errorf("experiment with name %s already exists", req.Name)
+	}
 	// Start a transaction
 	tx := s.repo.GetDB().Begin()
 	if tx.Error != nil {
@@ -195,4 +205,42 @@ func (s *service) GetExperimentByID(ctx context.Context, id uint) (*model.Experi
 	}
 
 	return experiment, variants, variantParametersMap, hashAttribute, nil
+}
+
+// RejectExperiment rejects an experiment by updating its status to "cancel"
+func (s *service) RejectExperiment(ctx context.Context, id uint, req *dto.RejectExperimentRequest) (*model.Experiment, error) {
+	// Get the experiment first to ensure it exists
+	experiment, err := s.repo.GetExperimentByID(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get experiment: %w", err)
+	}
+
+	// Check if experiment can be rejected (business logic based on ExperimentStatus enum)
+	if experiment.Status == "cancel" {
+		return nil, fmt.Errorf("experiment is already canceled")
+	}
+
+	if experiment.Status == "abort" {
+		return nil, fmt.Errorf("experiment is already aborted")
+	}
+
+	if experiment.Status == "running" {
+		return nil, fmt.Errorf("cannot reject a running experiment")
+	}
+
+	if experiment.Status == "finish" {
+		return nil, fmt.Errorf("cannot reject a finished experiment")
+	}
+
+	// Update the experiment status to cancel (reject)
+	experiment.Status = "cancel"
+	experiment.UpdatedAt = time.Now().Unix()
+
+	// Save the updated experiment
+	err = s.repo.UpdateExperiment(ctx, experiment)
+	if err != nil {
+		return nil, fmt.Errorf("failed to update experiment: %w", err)
+	}
+
+	return experiment, nil
 }

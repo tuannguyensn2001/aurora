@@ -89,6 +89,7 @@ type Repository interface {
 	GetExperimentVariantParametersByVariantID(ctx context.Context, variantID uint) ([]*model.ExperimentVariantParameter, error)
 	GetExperimentVariantParametersByExperimentID(ctx context.Context, experimentID uint) ([]*model.ExperimentVariantParameter, error)
 	DeleteExperimentVariantParametersByVariantID(ctx context.Context, variantID uint) error
+	GetExperimentByName(ctx context.Context, name string) (*model.Experiment, error)
 
 	// Database access for transactions
 	GetDB() *gorm.DB

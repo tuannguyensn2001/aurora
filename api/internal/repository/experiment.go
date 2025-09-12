@@ -117,3 +117,12 @@ func (r *repository) GetExperimentVariantParametersByExperimentID(ctx context.Co
 func (r *repository) DeleteExperimentVariantParametersByVariantID(ctx context.Context, variantID uint) error {
 	return r.db.WithContext(ctx).Where("experiment_variant_id = ?", variantID).Delete(&model.ExperimentVariantParameter{}).Error
 }
+
+func (r *repository) GetExperimentByName(ctx context.Context, name string) (*model.Experiment, error) {
+	var experiment model.Experiment
+	err := r.db.WithContext(ctx).Where("name = ?", name).First(&experiment).Error
+	if err != nil {
+		return nil, err
+	}
+	return &experiment, nil
+}

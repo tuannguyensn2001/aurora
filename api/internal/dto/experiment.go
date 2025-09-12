@@ -214,3 +214,8 @@ func ToExperimentDetailResponse(experiment *model.Experiment, variants []*model.
 		Variants:        variantResponses,
 	}
 }
+
+// RejectExperimentRequest represents the request to reject an experiment
+type RejectExperimentRequest struct {
+	Reason string `json:"reason,omitempty"` // Optional reason for rejection
+}

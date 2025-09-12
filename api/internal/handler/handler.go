@@ -395,3 +395,18 @@ func (h *Handler) GetExperimentByID(ctx context.Context, id uint) (*dto.Experime
 	response := dto.ToExperimentDetailResponse(experiment, variants, variantParametersMap, hashAttribute)
 	return &response, nil
 }
+
+// RejectExperiment handles the business logic for rejecting an experiment
+func (h *Handler) RejectExperiment(ctx context.Context, id uint, req *dto.RejectExperimentRequest) (*dto.ExperimentResponse, error) {
+	logger := log.Ctx(ctx).With().Str("handler", "reject-experiment").Uint("id", id).Logger()
+	logger.Info().Msg("Rejecting experiment")
+
+	experiment, err := h.service.RejectExperiment(ctx, id, req)
+	if err != nil {
+		logger.Error().Err(err).Uint("id", id).Msg("Failed to reject experiment")
+		return nil, err
+	}
+
+	response := dto.ToExperimentResponse(experiment)
+	return &response, nil
+}

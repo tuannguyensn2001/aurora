@@ -36,6 +36,7 @@ type Endpoints struct {
 	CreateExperiment             endpoint.Endpoint
 	GetAllExperiments            endpoint.Endpoint
 	GetExperimentByID            endpoint.Endpoint
+	RejectExperiment             endpoint.Endpoint
 }
 
 // MakeEndpoints creates all endpoints
@@ -65,6 +66,7 @@ func MakeEndpoints(h *handler.Handler) Endpoints {
 		CreateExperiment:             makeCreateExperimentEndpoint(h),
 		GetAllExperiments:            makeGetAllExperimentsEndpoint(h),
 		GetExperimentByID:            makeGetExperimentByIDEndpoint(h),
+		RejectExperiment:             makeRejectExperimentEndpoint(h),
 	}
 }
 
@@ -356,6 +358,19 @@ func makeGetExperimentByIDEndpoint(h *handler.Handler) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(GetExperimentByIDRequest)
 		return h.GetExperimentByID(ctx, req.ID)
+	}
+}
+
+// RejectExperimentRequest represents the endpoint request
+type RejectExperimentRequest struct {
+	ID      uint                        `json:"id"`
+	Request dto.RejectExperimentRequest `json:"request"`
+}
+
+func makeRejectExperimentEndpoint(h *handler.Handler) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(RejectExperimentRequest)
+		return h.RejectExperiment(ctx, req.ID, &req.Request)
 	}
 }
 

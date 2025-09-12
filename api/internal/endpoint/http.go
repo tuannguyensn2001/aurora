@@ -170,6 +170,13 @@ func MakeHTTPHandler(endpoints Endpoints) http.Handler {
 		options...,
 	))
 
+	r.Methods("PATCH").Path("/api/v1/experiments/{id}/reject").Handler(httptransport.NewServer(
+		endpoints.RejectExperiment,
+		decodeRejectExperimentRequest,
+		encodeResponse,
+		options...,
+	))
+
 	return r
 }
 
@@ -427,4 +434,19 @@ func decodeGetExperimentByIDRequest(ctx context.Context, r *http.Request) (inter
 		return nil, err
 	}
 	return GetExperimentByIDRequest{ID: id}, nil
+}
+
+func decodeRejectExperimentRequest(ctx context.Context, r *http.Request) (interface{}, error) {
+	vars := mux.Vars(r)
+	id, err := ParseID(vars["id"])
+	if err != nil {
+		return nil, err
+	}
+
+	var req dto.RejectExperimentRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return nil, err
+	}
+
+	return RejectExperimentRequest{ID: id, Request: req}, nil
 }
