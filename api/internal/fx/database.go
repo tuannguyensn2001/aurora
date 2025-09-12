@@ -17,6 +17,7 @@ type DatabaseParams struct {
 
 // ProvideDatabase provides the database connection
 func ProvideDatabase(lc fx.Lifecycle, params DatabaseParams) (*gorm.DB, error) {
+
 	db, err := database.NewConnection(params.Config)
 	if err != nil {
 		return nil, err

@@ -4,6 +4,7 @@ import (
 	"api/internal/endpoint"
 	"api/internal/handler"
 
+	"github.com/rs/zerolog"
 	"go.uber.org/fx"
 )
 
@@ -11,11 +12,12 @@ import (
 type EndpointParams struct {
 	fx.In
 	Handler *handler.Handler
+	Logger  zerolog.Logger
 }
 
 // ProvideEndpoints provides the endpoints
 func ProvideEndpoints(params EndpointParams) endpoint.Endpoints {
-	return endpoint.MakeEndpoints(params.Handler)
+	return endpoint.MakeEndpoints(params.Handler, params.Logger)
 }
 
 // EndpointModule provides the endpoint module

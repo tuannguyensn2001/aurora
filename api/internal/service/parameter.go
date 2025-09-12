@@ -4,10 +4,12 @@ import (
 	"api/internal/dto"
 	"api/internal/model"
 	"api/internal/repository"
+	internalWorkers "api/internal/workers"
 	"context"
 	"errors"
 	"fmt"
 
+	"github.com/rs/zerolog/log"
 	"gorm.io/gorm"
 )
 
@@ -92,6 +94,7 @@ func (s *service) GetAllParameters(ctx context.Context) ([]*model.Parameter, err
 
 // UpdateParameter updates an existing parameter
 func (s *service) UpdateParameter(ctx context.Context, id uint, req *dto.UpdateParameterRequest) (*model.Parameter, error) {
+	logger := log.Ctx(ctx).With().Str("service", "update-parameter").Uint("id", id).Logger()
 	parameter, err := s.GetParameterByID(ctx, id)
 	if err != nil {
 		return nil, err
@@ -147,11 +150,21 @@ func (s *service) UpdateParameter(ctx context.Context, id uint, req *dto.UpdateP
 		return nil, err
 	}
 
+	logger.Info().Msg("Enqueuing sync parameter job")
+	_, err = s.riverClient.Insert(ctx, internalWorkers.SyncParameterArgs{
+		ParameterID: int(id),
+	}, nil)
+	if err != nil {
+		logger.Error().Err(err).Msg("Failed to enqueue sync parameter job")
+		return nil, err
+	}
+
 	return parameter, nil
 }
 
 // UpdateParameterWithRules updates a parameter and completely replaces all its rules
 func (s *service) UpdateParameterWithRules(ctx context.Context, id uint, req *dto.UpdateParameterWithRulesRequest) (*model.Parameter, error) {
+	logger := log.Ctx(ctx).With().Str("service", "update-parameter-with-rules").Uint("id", id).Logger()
 	// Use database transaction to ensure atomicity
 	return s.withTransaction(ctx, func(txRepo repository.Repository) (*model.Parameter, error) {
 		parameter, err := txRepo.GetParameterByID(ctx, id)
@@ -281,6 +294,15 @@ func (s *service) UpdateParameterWithRules(ctx context.Context, id uint, req *dt
 		}
 
 		// Return updated parameter with all rules
+		logger.Info().Msg("Enqueuing sync parameter job")
+		_, err = s.riverClient.Insert(ctx, internalWorkers.SyncParameterArgs{
+			ParameterID: int(id),
+		}, nil)
+		if err != nil {
+			logger.Error().Err(err).Msg("Failed to enqueue sync parameter job")
+			return nil, fmt.Errorf("failed to enqueue sync parameter job: %v", err)
+		}
+
 		return txRepo.GetParameterByID(ctx, id)
 	})
 }

@@ -8,6 +8,7 @@ import (
 	"api/internal/handler"
 
 	"github.com/go-kit/kit/endpoint"
+	"github.com/rs/zerolog"
 )
 
 // Endpoints holds all endpoint functions
@@ -42,7 +43,7 @@ type Endpoints struct {
 }
 
 // MakeEndpoints creates all endpoints
-func MakeEndpoints(h *handler.Handler) Endpoints {
+func MakeEndpoints(h *handler.Handler, logger zerolog.Logger) Endpoints {
 	return Endpoints{
 		CreateAttribute:              makeCreateAttributeEndpoint(h),
 		GetAllAttributes:             makeGetAllAttributesEndpoint(h),
@@ -60,7 +61,7 @@ func MakeEndpoints(h *handler.Handler) Endpoints {
 		GetAllParameters:             makeGetAllParametersEndpoint(h),
 		GetParameterByID:             makeGetParameterByIDEndpoint(h),
 		UpdateParameter:              makeUpdateParameterEndpoint(h),
-		UpdateParameterWithRules:     makeUpdateParameterWithRulesEndpoint(h),
+		UpdateParameterWithRules:     loggingMiddleware(logger)(makeUpdateParameterWithRulesEndpoint(h)),
 		DeleteParameter:              makeDeleteParameterEndpoint(h),
 		AddParameterRule:             makeAddParameterRuleEndpoint(h),
 		UpdateParameterRule:          makeUpdateParameterRuleEndpoint(h),

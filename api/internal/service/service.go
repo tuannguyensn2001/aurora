@@ -5,6 +5,9 @@ import (
 	"api/internal/model"
 	"api/internal/repository"
 	"context"
+
+	"github.com/jackc/pgx/v5"
+	"github.com/riverqueue/river"
 )
 
 // Service defines the interface for all business logic operations
@@ -52,12 +55,14 @@ type Service interface {
 
 // service implements Service
 type service struct {
-	repo repository.Repository
+	repo        repository.Repository
+	riverClient *river.Client[pgx.Tx]
 }
 
 // New creates a new service
-func New(repo repository.Repository) Service {
+func New(repo repository.Repository, riverClient *river.Client[pgx.Tx]) Service {
 	return &service{
-		repo: repo,
+		repo:        repo,
+		riverClient: riverClient,
 	}
 }

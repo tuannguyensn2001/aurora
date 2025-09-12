@@ -26,6 +26,7 @@ func NewApp(configPath string) *fx.App {
 		HandlerModule,
 		EndpointModule,
 		ServerModule,
+		RiverModule,
 
 		// Invoke server to ensure it starts
 		fx.Invoke(func(*http.Server) {}),

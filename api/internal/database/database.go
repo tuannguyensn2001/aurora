@@ -22,11 +22,13 @@ func NewConnection(cfg *config.Config) (*gorm.DB, error) {
 
 	// Configure GORM logger based on environment
 	var logLevel logger.LogLevel
-	if cfg.IsDevelopment() {
-		logLevel = logger.Info
-	} else {
-		logLevel = logger.Error
-	}
+	// if cfg.IsDevelopment() {
+	// 	logLevel = logger.Info
+	// } else {
+	// 	logLevel = logger.Error
+	// }
+
+	logLevel = logger.Warn
 
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
 		Logger: logger.Default.LogMode(logLevel),
