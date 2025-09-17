@@ -4,7 +4,6 @@ import (
 	"api/internal/dto"
 	"api/internal/model"
 	"api/internal/repository"
-	internalWorkers "api/internal/workers"
 	"context"
 	"errors"
 	"fmt"
@@ -151,7 +150,7 @@ func (s *service) UpdateParameter(ctx context.Context, id uint, req *dto.UpdateP
 	}
 
 	logger.Info().Msg("Enqueuing sync parameter job")
-	_, err = s.riverClient.Insert(ctx, internalWorkers.SyncParameterArgs{
+	_, err = s.riverClient.Insert(ctx, dto.SyncParameterArgs{
 		ParameterID: int(id),
 	}, nil)
 	if err != nil {
@@ -295,7 +294,7 @@ func (s *service) UpdateParameterWithRules(ctx context.Context, id uint, req *dt
 
 		// Return updated parameter with all rules
 		logger.Info().Msg("Enqueuing sync parameter job")
-		_, err = s.riverClient.Insert(ctx, internalWorkers.SyncParameterArgs{
+		_, err = s.riverClient.Insert(ctx, dto.SyncParameterArgs{
 			ParameterID: int(id),
 		}, nil)
 		if err != nil {

@@ -26,6 +26,7 @@ func NewApp(configPath string) *fx.App {
 		HandlerModule,
 		EndpointModule,
 		ServerModule,
+		WorkerModule,
 		RiverModule,
 
 		// Invoke server to ensure it starts

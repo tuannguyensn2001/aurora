@@ -2,7 +2,6 @@ package fx
 
 import (
 	"api/config"
-	internalWorkers "api/internal/workers"
 	"context"
 	"fmt"
 
@@ -17,8 +16,9 @@ import (
 
 type RiverParams struct {
 	fx.In
-	Config *config.Config
-	Logger zerolog.Logger
+	Config  *config.Config
+	Logger  zerolog.Logger
+	Workers *river.Workers
 }
 
 func ProvideRiver(lc fx.Lifecycle, params RiverParams) *river.Client[pgx.Tx] {
@@ -27,8 +27,7 @@ func ProvideRiver(lc fx.Lifecycle, params RiverParams) *river.Client[pgx.Tx] {
 	if err != nil {
 		panic(err)
 	}
-	workers := river.NewWorkers()
-	river.AddWorker(workers, &internalWorkers.SyncParameterWorker{})
+	workers := params.Workers
 	riverClient, err := river.NewClient(riverpgxv5.New(dbPool), &river.Config{
 		Workers: workers,
 		Queues: map[string]river.QueueConfig{
