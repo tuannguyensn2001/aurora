@@ -186,6 +186,9 @@ func (w *SyncParameterWorker) mapParameterRuleConditionsToSDK(conditions []model
 			AttributeName:     attributeName,
 			AttributeDataType: attributeDataType,
 		}
+		if condition.Attribute != nil && condition.Attribute.DataType == model.DataTypeEnum {
+			sdkConditions[i].EnumOptions = condition.Attribute.EnumOptions
+		}
 	}
 
 	return sdkConditions, nil

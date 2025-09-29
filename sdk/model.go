@@ -61,4 +61,5 @@ type ParameterRuleCondition struct {
 	Value             string            `json:"value"`
 	AttributeName     string            `json:"attributeName"`
 	AttributeDataType string            `json:"attributeDataType"`
+	EnumOptions       []string          `json:"enumOptions"`
 }

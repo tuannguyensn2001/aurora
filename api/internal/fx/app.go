@@ -2,6 +2,7 @@ package fx
 
 import (
 	"net/http"
+	"sdk"
 
 	"go.uber.org/fx"
 )
@@ -29,8 +30,9 @@ func NewApp(configPath string) *fx.App {
 		ServerModule,
 		WorkerModule,
 		RiverModule,
+		SDKModule,
 
 		// Invoke server to ensure it starts
-		fx.Invoke(func(*http.Server) {}),
+		fx.Invoke(func(*http.Server, sdk.Client) {}),
 	)
 }
