@@ -13,3 +13,5 @@ database:
   dbname: aurora_dev
   sslmode: disable
   
+s3:
+  bucketName: dev-aurora-experiment

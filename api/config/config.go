@@ -21,6 +21,9 @@ type Config struct {
 		DBName   string `yaml:"dbname"`
 		SSLMode  string `yaml:"sslmode"`
 	} `yaml:"database"`
+	S3 struct {
+		BucketName string `yaml:"bucketName"`
+	} `yaml:"s3"`
 }
 
 func Load(configPath string) (*Config, error) {
