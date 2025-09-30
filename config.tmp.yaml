@@ -1,0 +1,17 @@
+service:
+  name: aurora-api
+  env: development
+
+logging:
+  level: debug
+
+database:
+  host: localhost
+  port: 5432
+  user: postgres
+  password: postgres
+  dbname: aurora_dev
+  sslmode: disable
+  
+s3:
+  bucketName: dev-aurora-experiment
