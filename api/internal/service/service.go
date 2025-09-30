@@ -5,6 +5,7 @@ import (
 	"api/internal/model"
 	"api/internal/repository"
 	"context"
+	"sdk"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/riverqueue/river"
@@ -51,18 +52,21 @@ type Service interface {
 	RejectExperiment(ctx context.Context, id uint, req *dto.RejectExperimentRequest) (*model.Experiment, error)
 	ApproveExperiment(ctx context.Context, id uint, req *dto.ApproveExperimentRequest) (*model.Experiment, error)
 	AbortExperiment(ctx context.Context, id uint, req *dto.AbortExperimentRequest) (*model.Experiment, error)
+	SimulateParameter(ctx context.Context, req *dto.SimulateParameterRequest) (dto.SimulateParameterResponse, error)
 }
 
 // service implements Service
 type service struct {
-	repo        repository.Repository
-	riverClient *river.Client[pgx.Tx]
+	repo         repository.Repository
+	riverClient  *river.Client[pgx.Tx]
+	auroraClient sdk.Client
 }
 
 // New creates a new service
-func New(repo repository.Repository, riverClient *river.Client[pgx.Tx]) Service {
+func New(repo repository.Repository, riverClient *river.Client[pgx.Tx], auroraClient sdk.Client) Service {
 	return &service{
-		repo:        repo,
-		riverClient: riverClient,
+		repo:         repo,
+		riverClient:  riverClient,
+		auroraClient: auroraClient,
 	}
 }

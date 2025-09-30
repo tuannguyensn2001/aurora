@@ -191,6 +191,13 @@ func MakeHTTPHandler(endpoints Endpoints) http.Handler {
 		options...,
 	))
 
+	r.Methods("POST").Path("/api/v1/parameters/simulate").Handler(httptransport.NewServer(
+		endpoints.SimulateParameter,
+		decodeSimulateParameterRequest,
+		encodeResponse,
+		options...,
+	))
+
 	return r
 }
 
@@ -493,4 +500,12 @@ func decodeAbortExperimentRequest(ctx context.Context, r *http.Request) (interfa
 	}
 
 	return AbortExperimentRequest{ID: id, Request: req}, nil
+}
+
+func decodeSimulateParameterRequest(ctx context.Context, r *http.Request) (interface{}, error) {
+	var req dto.SimulateParameterRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return nil, err
+	}
+	return SimulateParameterRequest{Request: req}, nil
 }

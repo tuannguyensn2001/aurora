@@ -218,3 +218,19 @@ func ToParameterListResponse(parameters []*model.Parameter) ParameterListRespons
 		Parameters: responses,
 	}
 }
+
+type SimulateParameterRequest struct {
+	ParameterName string                     `json:"parameterName" validate:"required"`
+	ParameterType model.ParameterDataType    `json:"parameterType" validate:"required,oneof=boolean string number"`
+	Attributes    []SimulateAttributeRequest `json:"attributes" validate:"required"`
+}
+
+type SimulateAttributeRequest struct {
+	DataType model.DataType `json:"dataType" validate:"required,oneof=boolean string number"`
+	Value    string         `json:"value" validate:"required"`
+	Name     string         `json:"name" validate:"required"`
+}
+
+type SimulateParameterResponse struct {
+	Value interface{} `json:"value"`
+}

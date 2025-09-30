@@ -7,6 +7,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sdk"
+	"strconv"
 
 	"github.com/rs/zerolog/log"
 	"gorm.io/gorm"
@@ -637,4 +639,48 @@ func (s *service) getDB() *gorm.DB {
 
 	// Fallback - this shouldn't happen in a well-designed system
 	panic("repository does not expose underlying database connection")
+}
+
+func (s *service) SimulateParameter(ctx context.Context, req *dto.SimulateParameterRequest) (dto.SimulateParameterResponse, error) {
+
+	logger := log.Ctx(ctx).With().Str("service", "simulate-parameter").Logger()
+
+	attribute := sdk.NewAttribute()
+	for _, attributeReq := range req.Attributes {
+		logger.Info().Str("attribute", attributeReq.Name).Str("dataType", string(attributeReq.DataType)).Str("value", attributeReq.Value).Msg("Simulating attribute")
+		switch attributeReq.DataType {
+		case model.DataTypeBoolean:
+			value, err := strconv.ParseBool(attributeReq.Value)
+			if err == nil {
+				attribute.SetBool(attributeReq.Name, value)
+			}
+		case model.DataTypeString:
+			attribute.SetString(attributeReq.Name, attributeReq.Value)
+		case model.DataTypeNumber:
+			value, err := strconv.ParseFloat(attributeReq.Value, 64)
+			if err == nil {
+				attribute.SetNumber(attributeReq.Name, value)
+			}
+		case model.DataTypeEnum:
+			attribute.SetString(attributeReq.Name, attributeReq.Value)
+		}
+
+	}
+
+	logger.Info().Interface("attribute", attribute.Keys()).Msg("Simulating parameter")
+
+	rolloutValue := s.auroraClient.EvaluateParameter(ctx, req.ParameterName, attribute)
+	var value interface{}
+	switch req.ParameterType {
+	case model.ParameterDataTypeBoolean:
+		value = rolloutValue.AsBool(false)
+	case model.ParameterDataTypeString:
+		value = rolloutValue.AsString("")
+	case model.ParameterDataTypeNumber:
+		value = rolloutValue.AsNumber(0)
+	}
+
+	return dto.SimulateParameterResponse{
+		Value: value,
+	}, nil
 }

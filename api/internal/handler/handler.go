@@ -440,3 +440,16 @@ func (h *Handler) AbortExperiment(ctx context.Context, id uint, req *dto.AbortEx
 	response := dto.ToExperimentResponse(experiment)
 	return &response, nil
 }
+
+func (h *Handler) SimulateParameter(ctx context.Context, req *dto.SimulateParameterRequest) (*dto.SimulateParameterResponse, error) {
+	logger := log.Ctx(ctx).With().Str("handler", "simulate-parameter").Logger()
+	logger.Info().Msg("Simulating parameter")
+
+	response, err := h.service.SimulateParameter(ctx, req)
+	if err != nil {
+		logger.Error().Err(err).Msg("Failed to simulate parameter")
+		return nil, err
+	}
+
+	return &response, nil
+}

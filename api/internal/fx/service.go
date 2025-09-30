@@ -3,6 +3,7 @@ package fx
 import (
 	"api/internal/repository"
 	"api/internal/service"
+	"sdk"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/riverqueue/river"
@@ -12,13 +13,14 @@ import (
 // ServiceParams holds the parameters needed for service
 type ServiceParams struct {
 	fx.In
-	Repository  repository.Repository
-	RiverClient *river.Client[pgx.Tx]
+	Repository   repository.Repository
+	RiverClient  *river.Client[pgx.Tx]
+	AuroraClient sdk.Client
 }
 
 // ProvideService provides the service instance
 func ProvideService(params ServiceParams) service.Service {
-	return service.New(params.Repository, params.RiverClient)
+	return service.New(params.Repository, params.RiverClient, params.AuroraClient)
 }
 
 // ServiceModule provides the service module

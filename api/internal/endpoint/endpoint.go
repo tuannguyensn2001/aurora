@@ -40,6 +40,7 @@ type Endpoints struct {
 	RejectExperiment             endpoint.Endpoint
 	ApproveExperiment            endpoint.Endpoint
 	AbortExperiment              endpoint.Endpoint
+	SimulateParameter            endpoint.Endpoint
 }
 
 // MakeEndpoints creates all endpoints
@@ -72,6 +73,7 @@ func MakeEndpoints(h *handler.Handler, logger zerolog.Logger) Endpoints {
 		RejectExperiment:             makeRejectExperimentEndpoint(h),
 		ApproveExperiment:            makeApproveExperimentEndpoint(h),
 		AbortExperiment:              makeAbortExperimentEndpoint(h),
+		SimulateParameter:            loggingMiddleware(logger)(makeSimulateParameterEndpoint(h)),
 	}
 }
 
@@ -402,6 +404,19 @@ func makeAbortExperimentEndpoint(h *handler.Handler) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(AbortExperimentRequest)
 		return h.AbortExperiment(ctx, req.ID, &req.Request)
+	}
+}
+
+// SimulateParameterRequest represents the endpoint request
+
+type SimulateParameterRequest struct {
+	Request dto.SimulateParameterRequest `json:"request"`
+}
+
+func makeSimulateParameterEndpoint(h *handler.Handler) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(SimulateParameterRequest)
+		return h.SimulateParameter(ctx, &req.Request)
 	}
 }
 

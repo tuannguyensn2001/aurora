@@ -5,6 +5,7 @@ import (
 	"context"
 	"log/slog"
 	"sdk"
+	"time"
 
 	"go.uber.org/fx"
 )
@@ -17,7 +18,7 @@ type SDKParams struct {
 func ProvideSDK(lc fx.Lifecycle, params SDKParams) sdk.Client {
 	client := sdk.NewClient(sdk.ClientOptions{
 		S3BucketName: params.Cfg.S3.BucketName,
-	}, sdk.WithPath("sdk-dump"))
+	}, sdk.WithPath("sdk-dump"), sdk.WithLogLevel(slog.LevelError), sdk.WithRefreshRate(5*time.Minute))
 	slog.Info("before start")
 	lc.Append(fx.Hook{
 		OnStop: func(ctx context.Context) error {

@@ -23,6 +23,7 @@ const (
 type Client interface {
 	Start(ctx context.Context)
 	Stop()
+	EvaluateParameter(ctx context.Context, parameterName string, attribute *attribute) rolloutValue
 }
 
 type client struct {
