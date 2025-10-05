@@ -2,6 +2,7 @@ package service
 
 import (
 	"api/internal/dto"
+	"api/internal/mapper"
 	"api/internal/model"
 	"api/internal/repository"
 	"context"
@@ -683,4 +684,13 @@ func (s *service) SimulateParameter(ctx context.Context, req *dto.SimulateParame
 	return dto.SimulateParameterResponse{
 		Value: value,
 	}, nil
+}
+
+func (s *service) GetAllParametersSDK(ctx context.Context) ([]sdk.Parameter, error) {
+	parameters, err := s.repo.GetAllParameters(ctx, 0, 0)
+	if err != nil {
+		return nil, err
+	}
+
+	return mapper.ParametersToSDK(parameters)
 }

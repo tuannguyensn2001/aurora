@@ -12,6 +12,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/dgraph-io/badger/v4"
+	"resty.dev/v3"
 )
 
 const (
@@ -38,6 +39,7 @@ type client struct {
 	db           *badger.DB
 	engine       *engine
 	endpointUrl  string
+	enableS3     bool
 }
 
 type ClientOptions struct {
@@ -77,6 +79,12 @@ func WithPath(path string) Option {
 	}
 }
 
+func WithEnableS3(enableS3 bool) Option {
+	return func(c *client) {
+		c.enableS3 = enableS3
+	}
+}
+
 func (c *client) applyDefaults() {
 	c.refreshRate = defaultRefreshRate
 	c.logLevel = defaultLogLevel
@@ -88,6 +96,7 @@ func (c *client) applyDefaults() {
 	c.inMemoryOnly = false
 	c.path = defaultPath
 	c.quit = make(chan struct{})
+	c.enableS3 = true
 }
 
 func NewClient(clientOptions ClientOptions, options ...Option) *client {
@@ -168,11 +177,16 @@ func (c *client) persist(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	c.logger.Info("parameters persisted")
+	c.logger.Info("parameters persisted", len(parameters))
 	return nil
 }
 
 func (c *client) getParameters(ctx context.Context) ([]Parameter, error) {
+
+	if !c.enableS3 {
+		return c.getParametersFromUpstream(ctx)
+	}
+
 	getObjectInput := &s3.GetObjectInput{
 		Bucket: aws.String(c.s3BucketName),
 		Key:    aws.String("parameters.json"),
@@ -188,6 +202,31 @@ func (c *client) getParameters(ctx context.Context) ([]Parameter, error) {
 		return nil, err
 	}
 	return parameters, nil
+}
+
+type UpstreamParametersResponse struct {
+	Parameters []Parameter `json:"parameters"`
+}
+
+func (c *client) getParametersFromUpstream(ctx context.Context) ([]Parameter, error) {
+	client := resty.New()
+	defer client.Close()
+	var res UpstreamParametersResponse
+	response, err := client.R().
+		SetContext(ctx).
+		SetResult(&res).
+		SetBody(map[string]interface{}{}).
+		Post(fmt.Sprintf("%s/api/v1/sdk/parameters", c.endpointUrl))
+	c.logger.Debug("parameters from upstream", "response", response)
+
+	if err != nil {
+		c.logger.ErrorContext(ctx, "failed to get parameters from upstream", "error", err)
+		return nil, err
+	}
+
+	castResp := response.Result().(*UpstreamParametersResponse)
+	return castResp.Parameters, nil
+
 }
 
 func (c *client) persistParameters(ctx context.Context, parameters []Parameter) error {

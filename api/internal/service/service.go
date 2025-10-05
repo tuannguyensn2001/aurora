@@ -36,6 +36,7 @@ type Service interface {
 	GetParameterByID(ctx context.Context, id uint) (*model.Parameter, error)
 	GetParameterByName(ctx context.Context, name string) (*model.Parameter, error)
 	GetAllParameters(ctx context.Context) ([]*model.Parameter, error)
+	GetAllParametersSDK(ctx context.Context) ([]sdk.Parameter, error)
 	UpdateParameter(ctx context.Context, id uint, req *dto.UpdateParameterRequest) (*model.Parameter, error)
 	UpdateParameterWithRules(ctx context.Context, id uint, req *dto.UpdateParameterWithRulesRequest) (*model.Parameter, error)
 	DeleteParameter(ctx context.Context, id uint) error
