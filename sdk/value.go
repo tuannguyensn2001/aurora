@@ -2,20 +2,44 @@ package sdk
 
 import "strconv"
 
-type rolloutValue struct {
+// RolloutValue represents a value with its associated data type
+type RolloutValue struct {
 	value    *string
 	dataType ParameterDataType
+	err      error
 }
 
-func NewRolloutValue(value *string, dataType ParameterDataType) rolloutValue {
-	return rolloutValue{
+// NewRolloutValue creates a new RolloutValue instance
+func NewRolloutValue(value *string, dataType ParameterDataType) RolloutValue {
+	return RolloutValue{
 		value:    value,
 		dataType: dataType,
+		err:      nil,
 	}
 }
 
-func (rv rolloutValue) AsString(defaultValue string) string {
-	if rv.dataType != ParameterDataTypeString {
+// NewRolloutValueWithError creates a new RolloutValue with an error
+func NewRolloutValueWithError(err error) RolloutValue {
+	return RolloutValue{
+		value:    nil,
+		dataType: "",
+		err:      err,
+	}
+}
+
+// HasError returns true if the RolloutValue contains an error
+func (rv RolloutValue) HasError() bool {
+	return rv.err != nil
+}
+
+// Error returns the error if present
+func (rv RolloutValue) Error() error {
+	return rv.err
+}
+
+// AsString returns the value as a string, or defaultValue if conversion fails or there's an error
+func (rv RolloutValue) AsString(defaultValue string) string {
+	if rv.HasError() || rv.dataType != ParameterDataTypeString {
 		return defaultValue
 	}
 	if rv.value == nil {
@@ -24,8 +48,9 @@ func (rv rolloutValue) AsString(defaultValue string) string {
 	return *rv.value
 }
 
-func (rv rolloutValue) AsNumber(defaultValue float64) float64 {
-	if rv.dataType != ParameterDataTypeNumber {
+// AsNumber returns the value as a float64, or defaultValue if conversion fails or there's an error
+func (rv RolloutValue) AsNumber(defaultValue float64) float64 {
+	if rv.HasError() || rv.dataType != ParameterDataTypeNumber {
 		return defaultValue
 	}
 	if rv.value == nil {
@@ -38,8 +63,9 @@ func (rv rolloutValue) AsNumber(defaultValue float64) float64 {
 	return value
 }
 
-func (rv rolloutValue) AsInt(defaultValue int) int {
-	if rv.dataType != ParameterDataTypeNumber {
+// AsInt returns the value as an int, or defaultValue if conversion fails or there's an error
+func (rv RolloutValue) AsInt(defaultValue int) int {
+	if rv.HasError() || rv.dataType != ParameterDataTypeNumber {
 		return defaultValue
 	}
 	if rv.value == nil {
@@ -52,8 +78,9 @@ func (rv rolloutValue) AsInt(defaultValue int) int {
 	return int(value)
 }
 
-func (rv rolloutValue) AsBool(defaultValue bool) bool {
-	if rv.dataType != ParameterDataTypeBoolean {
+// AsBool returns the value as a bool, or defaultValue if conversion fails or there's an error
+func (rv RolloutValue) AsBool(defaultValue bool) bool {
+	if rv.HasError() || rv.dataType != ParameterDataTypeBoolean {
 		return defaultValue
 	}
 	if rv.value == nil {

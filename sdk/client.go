@@ -1,3 +1,47 @@
+// Package sdk provides the Aurora A/B Testing SDK for Go applications.
+//
+// This SDK allows applications to:
+// - Evaluate feature flags and parameters based on user attributes
+// - Fetch experiment configurations from Aurora backend or S3
+// - Cache configurations locally for performance
+// - Handle errors gracefully with proper error types
+//
+// Basic usage:
+//
+//	clientOptions := sdk.ClientOptions{
+//		EndpointURL: "https://your-aurora-instance.com",
+//		S3BucketName: "your-s3-bucket", // optional
+//	}
+//
+//	client, err := sdk.NewClient(clientOptions,
+//		sdk.WithRefreshRate(30*time.Second),
+//		sdk.WithLogLevel(slog.LevelInfo),
+//		sdk.WithInMemoryOnly(true),
+//	)
+//	if err != nil {
+//		log.Fatal(err)
+//	}
+//
+//	err = client.Start(context.Background())
+//	if err != nil {
+//		log.Fatal(err)
+//	}
+//	defer client.Stop()
+//
+//	// Create user attributes
+//	attrs := sdk.NewAttribute().
+//		SetString("user_id", "12345").
+//		SetString("country", "US").
+//		SetNumber("age", 25)
+//
+//	// Evaluate a parameter
+//	result := client.EvaluateParameter(context.Background(), "welcome_message", attrs)
+//	if result.HasError() {
+//		log.Printf("Error: %v", result.Error())
+//	} else {
+//		message := result.AsString("Hello!")
+//		fmt.Println(message)
+//	}
 package sdk
 
 import (
@@ -9,7 +53,7 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/config"
+	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/dgraph-io/badger/v4"
 	"resty.dev/v3"
@@ -21,13 +65,16 @@ const (
 	defaultPath        = "/sdk-dump"
 )
 
+// Client interface defines the main SDK operations
 type Client interface {
-	Start(ctx context.Context)
+	Start(ctx context.Context) error
 	Stop()
-	EvaluateParameter(ctx context.Context, parameterName string, attribute *attribute) rolloutValue
+	EvaluateParameter(ctx context.Context, parameterName string, attribute *Attribute) RolloutValue
+	GetMetadata(ctx context.Context) (*MetadataResponse, error)
 }
 
-type client struct {
+// AuroraClient implements the Client interface
+type AuroraClient struct {
 	s3BucketName string
 	refreshRate  time.Duration
 	logLevel     slog.Level
@@ -42,108 +89,141 @@ type client struct {
 	enableS3     bool
 }
 
+// ClientOptions holds the required configuration options for the client
 type ClientOptions struct {
 	S3BucketName string
-	EndpointUrl  string
+	EndpointURL  string
 }
 
-type Option func(*client)
+// Option represents a functional option for configuring the client
+type Option func(*AuroraClient)
 
+// WithRefreshRate sets the refresh rate for parameter updates
 func WithRefreshRate(refreshRate time.Duration) Option {
-	return func(c *client) {
+	return func(c *AuroraClient) {
 		c.refreshRate = refreshRate
 	}
 }
 
+// WithLogLevel sets the logging level
 func WithLogLevel(logLevel slog.Level) Option {
-	return func(c *client) {
+	return func(c *AuroraClient) {
 		c.logLevel = logLevel
 	}
 }
 
+// WithS3Client sets a custom S3 client
 func WithS3Client(s3Client *s3.Client) Option {
-	return func(c *client) {
+	return func(c *AuroraClient) {
 		c.s3Client = s3Client
 	}
 }
 
+// WithInMemoryOnly configures the client to use in-memory storage only
 func WithInMemoryOnly(inMemoryOnly bool) Option {
-	return func(c *client) {
+	return func(c *AuroraClient) {
 		c.inMemoryOnly = inMemoryOnly
 	}
 }
 
+// WithPath sets the storage path for the BadgerDB
 func WithPath(path string) Option {
-	return func(c *client) {
+	return func(c *AuroraClient) {
 		c.path = path
 	}
 }
 
+// WithEnableS3 enables or disables S3 usage
 func WithEnableS3(enableS3 bool) Option {
-	return func(c *client) {
+	return func(c *AuroraClient) {
 		c.enableS3 = enableS3
 	}
 }
 
-func (c *client) applyDefaults() {
+func (c *AuroraClient) applyDefaults() {
+	// Set defaults
 	c.refreshRate = defaultRefreshRate
 	c.logLevel = defaultLogLevel
-	cfg, err := config.LoadDefaultConfig(context.Background())
-	if err != nil {
-		c.logger.ErrorContext(context.Background(), "failed to load default config", "error", err)
-	}
-	c.s3Client = s3.NewFromConfig(cfg)
 	c.inMemoryOnly = false
 	c.path = defaultPath
-	c.quit = make(chan struct{})
 	c.enableS3 = true
+	c.quit = make(chan struct{})
+
+	// Set up AWS S3 client
+	if c.enableS3 {
+		cfg, err := awsconfig.LoadDefaultConfig(context.Background())
+		if err != nil {
+			// Log warning but don't fail - fallback to upstream API
+			c.enableS3 = false
+		} else {
+			c.s3Client = s3.NewFromConfig(cfg)
+		}
+	}
 }
 
-func NewClient(clientOptions ClientOptions, options ...Option) *client {
-	c := &client{
-		s3BucketName: clientOptions.S3BucketName,
-		endpointUrl:  clientOptions.EndpointUrl,
+// NewClient creates a new Aurora SDK client with the given options
+func NewClient(clientOptions ClientOptions, options ...Option) (*AuroraClient, error) {
+	// Validate required fields
+	if clientOptions.EndpointURL == "" {
+		return nil, NewConfigurationError("endpoint URL is required", nil)
 	}
+
+	c := &AuroraClient{
+		s3BucketName: clientOptions.S3BucketName,
+		endpointUrl:  clientOptions.EndpointURL,
+	}
+
+	// Apply defaults
 	c.applyDefaults()
+
+	// Apply options
 	for _, option := range options {
 		option(c)
 	}
+
+	// Initialize logger
 	opts := &slog.HandlerOptions{
 		Level: c.logLevel,
 	}
 	c.logger = slog.New(slog.NewTextHandler(os.Stdout, opts))
 
+	// Initialize BadgerDB
 	opt := badger.DefaultOptions(c.path)
 	if c.inMemoryOnly {
 		opt = opt.WithInMemory(true)
 	}
 	db, err := badger.Open(opt)
 	if err != nil {
-		panic(fmt.Errorf("failed to open badger db: %w", err))
+		return nil, NewConfigurationError("failed to open storage", err)
 	}
 	c.db = db
 	c.engine = newEngine(c.logger)
-	return c
+	return c, nil
 }
 
-func (c *client) Start(ctx context.Context) {
+// Start initializes and starts the client
+func (c *AuroraClient) Start(ctx context.Context) error {
 	c.logger.Info("starting")
 	if ctx.Err() != nil {
 		c.logger.ErrorContext(ctx, "context is done")
+		return ctx.Err()
 	}
 	err := c.persist(ctx)
 	if err != nil {
 		c.logger.ErrorContext(ctx, "failed to persist parameters", "error", err)
+
 	}
 	go c.dispatch(ctx)
+	return nil
 }
 
-func (c *client) Stop() {
+// Stop shuts down the client gracefully
+func (c *AuroraClient) Stop() {
 	c.db.Close()
 	close(c.quit)
 }
 
-func (c *client) dispatch(ctx context.Context) {
+func (c *AuroraClient) dispatch(ctx context.Context) {
 	c.logger.Info("dispatching")
 	ticket := time.NewTicker(c.refreshRate)
 
@@ -167,7 +247,7 @@ func (c *client) dispatch(ctx context.Context) {
 	}
 }
 
-func (c *client) persist(ctx context.Context) error {
+func (c *AuroraClient) persist(ctx context.Context) error {
 
 	parameters, err := c.getParameters(ctx)
 	if err != nil {
@@ -177,11 +257,11 @@ func (c *client) persist(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	c.logger.Info("parameters persisted", len(parameters))
+	c.logger.Info("parameters persisted", "count", len(parameters))
 	return nil
 }
 
-func (c *client) getParameters(ctx context.Context) ([]Parameter, error) {
+func (c *AuroraClient) getParameters(ctx context.Context) ([]Parameter, error) {
 
 	if !c.enableS3 {
 		return c.getParametersFromUpstream(ctx)
@@ -193,22 +273,23 @@ func (c *client) getParameters(ctx context.Context) ([]Parameter, error) {
 	}
 	getObjectOutput, err := c.s3Client.GetObject(ctx, getObjectInput)
 	if err != nil {
-		return nil, err
+		return nil, NewNetworkError("get parameters from s3", err)
 	}
 
 	parameters := []Parameter{}
 	err = json.NewDecoder(getObjectOutput.Body).Decode(&parameters)
 	if err != nil {
-		return nil, err
+		return nil, NewNetworkError("decode parameters from s3", err)
 	}
 	return parameters, nil
 }
 
+// UpstreamParametersResponse represents the response from the upstream parameters API
 type UpstreamParametersResponse struct {
 	Parameters []Parameter `json:"parameters"`
 }
 
-func (c *client) getParametersFromUpstream(ctx context.Context) ([]Parameter, error) {
+func (c *AuroraClient) getParametersFromUpstream(ctx context.Context) ([]Parameter, error) {
 	client := resty.New()
 	defer client.Close()
 	var res UpstreamParametersResponse
@@ -221,7 +302,7 @@ func (c *client) getParametersFromUpstream(ctx context.Context) ([]Parameter, er
 
 	if err != nil {
 		c.logger.ErrorContext(ctx, "failed to get parameters from upstream", "error", err)
-		return nil, err
+		return nil, NewNetworkError("get parameters from upstream", err)
 	}
 
 	castResp := response.Result().(*UpstreamParametersResponse)
@@ -229,29 +310,30 @@ func (c *client) getParametersFromUpstream(ctx context.Context) ([]Parameter, er
 
 }
 
-func (c *client) persistParameters(ctx context.Context, parameters []Parameter) error {
+func (c *AuroraClient) persistParameters(ctx context.Context, parameters []Parameter) error {
 
 	for _, parameter := range parameters {
 		jsonParameters, err := json.Marshal(parameter)
 		if err != nil {
-			return err
+			return NewStorageError("marshal parameter", err)
 		}
 		err = c.db.Update(func(txn *badger.Txn) error {
 			return txn.Set([]byte(parameter.Name), jsonParameters)
 		})
 		if err != nil {
-			return err
+			return NewStorageError("store parameter", err)
 		}
 	}
 	return nil
 }
 
-func (c *client) EvaluateParameter(ctx context.Context, parameterName string, attribute *attribute) rolloutValue {
+// EvaluateParameter evaluates a parameter against the given attributes
+func (c *AuroraClient) EvaluateParameter(ctx context.Context, parameterName string, attribute *Attribute) RolloutValue {
 
 	return c.resolveFromParameter(ctx, parameterName, attribute)
 }
 
-func (c *client) resolveFromParameter(ctx context.Context, parameterName string, attribute *attribute) rolloutValue {
+func (c *AuroraClient) resolveFromParameter(ctx context.Context, parameterName string, attribute *Attribute) RolloutValue {
 
 	c.logger.InfoContext(ctx, "resolving parameter", "parameterName", parameterName)
 	var parameter Parameter
@@ -266,7 +348,7 @@ func (c *client) resolveFromParameter(ctx context.Context, parameterName string,
 	})
 	if err != nil {
 		c.logger.ErrorContext(ctx, "failed to get parameter", "error", err)
-		return rolloutValue{}
+		return NewRolloutValueWithError(NewParameterNotFoundError(parameterName))
 	}
 
 	rolloutValueStr := c.engine.evaluateParameter(&parameter, attribute)

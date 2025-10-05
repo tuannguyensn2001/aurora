@@ -2,6 +2,7 @@ package sdk
 
 import "time"
 
+// ParameterDataType represents the data type of a parameter
 type ParameterDataType string
 
 const (
@@ -10,6 +11,7 @@ const (
 	ParameterDataTypeNumber  ParameterDataType = "number"
 )
 
+// Parameter represents an experiment parameter with rules and conditions
 type Parameter struct {
 	Name                string            `json:"name"`
 	DataType            ParameterDataType `json:"dataType"`
@@ -17,6 +19,7 @@ type Parameter struct {
 	Rules               []ParameterRule   `json:"rules"`
 }
 
+// ConditionMatchType represents how conditions should be matched
 type ConditionMatchType string
 
 const (
@@ -24,6 +27,7 @@ const (
 	ConditionMatchTypeNotMatch ConditionMatchType = "not_match"
 )
 
+// RuleType represents the type of rule (segment or attribute)
 type RuleType string
 
 const (
@@ -31,6 +35,7 @@ const (
 	RuleTypeAttribute RuleType = "attribute"
 )
 
+// ConditionOperator represents operators used in rule conditions
 type ConditionOperator string
 
 const (
@@ -46,18 +51,20 @@ const (
 	ConditionOperatorNotIn              ConditionOperator = "not_in"
 )
 
+// ParameterRule represents a rule for parameter evaluation
 type ParameterRule struct {
-	ID           uint                     `json:"id"`
-	Name         string                   `json:"name"`
-	Type         RuleType                 `json:"type"`
-	RolloutValue string                   `json:"rolloutValue"`
-	SegmentID    int64                    `json:"segmentId"`
-	MatchType    ConditionMatchType       `json:"matchType"`
-	Conditions   []ParameterRuleCondition `json:"conditions"`
-	Segment      *Segment                 `json:"segment,omitempty"`
+	ID           uint               `json:"id"`
+	Name         string             `json:"name"`
+	Type         RuleType           `json:"type"`
+	RolloutValue string             `json:"rolloutValue"`
+	SegmentID    int64              `json:"segmentId"`
+	MatchType    ConditionMatchType `json:"matchType"`
+	Conditions   []RuleCondition    `json:"conditions"`
+	Segment      *Segment           `json:"segment,omitempty"`
 }
 
-type SegmentRuleCondition struct {
+// RuleCondition represents a unified condition structure for both parameter and segment rules
+type RuleCondition struct {
 	ID                uint              `gorm:"primaryKey;autoIncrement" json:"id"`
 	AttributeID       uint              `gorm:"not null" json:"attributeId"`
 	Operator          ConditionOperator `gorm:"type:condition_operator;not null" json:"operator"`
@@ -67,14 +74,33 @@ type SegmentRuleCondition struct {
 	EnumOptions       []string          `json:"enumOptions"`
 }
 
-type SegmentRule struct {
-	ID          uint                   `gorm:"primaryKey;autoIncrement" json:"id"`
-	Name        string                 `gorm:"not null;size:255" json:"name"`
-	Description string                 `gorm:"type:text" json:"description"`
-	SegmentID   uint                   `gorm:"not null" json:"segmentId"`
-	Conditions  []SegmentRuleCondition `gorm:"foreignKey:RuleID" json:"conditions"`
+// Implement the Condition interface for RuleCondition
+func (rc *RuleCondition) GetAttributeName() string {
+	return rc.AttributeName
+}
+func (rc *RuleCondition) GetAttributeDataType() string {
+	return rc.AttributeDataType
+}
+func (rc *RuleCondition) GetOperator() ConditionOperator {
+	return rc.Operator
+}
+func (rc *RuleCondition) GetValue() string {
+	return rc.Value
+}
+func (rc *RuleCondition) GetEnumOptions() []string {
+	return rc.EnumOptions
 }
 
+// SegmentRule represents a rule within a segment
+type SegmentRule struct {
+	ID          uint            `gorm:"primaryKey;autoIncrement" json:"id"`
+	Name        string          `gorm:"not null;size:255" json:"name"`
+	Description string          `gorm:"type:text" json:"description"`
+	SegmentID   uint            `gorm:"not null" json:"segmentId"`
+	Conditions  []RuleCondition `gorm:"foreignKey:RuleID" json:"conditions"`
+}
+
+// Segment represents a segment with its associated rules
 type Segment struct {
 	ID          uint          `gorm:"primaryKey;autoIncrement" json:"id"`
 	Name        string        `gorm:"uniqueIndex;not null;size:255" json:"name"`
@@ -82,14 +108,4 @@ type Segment struct {
 	CreatedAt   time.Time     `gorm:"autoCreateTime" json:"createdAt"`
 	UpdatedAt   time.Time     `gorm:"autoUpdateTime" json:"updatedAt"`
 	Rules       []SegmentRule `gorm:"foreignKey:SegmentID" json:"rules"`
-}
-
-type ParameterRuleCondition struct {
-	ID                uint              `json:"id"`
-	AttributeID       uint              `json:"attributeId"`
-	Operator          ConditionOperator `json:"operator"`
-	Value             string            `json:"value"`
-	AttributeName     string            `json:"attributeName"`
-	AttributeDataType string            `json:"attributeDataType"`
-	EnumOptions       []string          `json:"enumOptions"`
 }

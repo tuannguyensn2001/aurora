@@ -7,11 +7,13 @@ import (
 	"resty.dev/v3"
 )
 
+// MetadataResponse represents the response from the metadata API
 type MetadataResponse struct {
 	EnableS3 bool `json:"enableS3"`
 }
 
-func (c *client) GetMetadata(ctx context.Context) (*MetadataResponse, error) {
+// GetMetadata retrieves metadata from the upstream service
+func (c *AuroraClient) GetMetadata(ctx context.Context) (*MetadataResponse, error) {
 	client := resty.New()
 	defer client.Close()
 	response, err := client.R().

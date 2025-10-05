@@ -118,9 +118,9 @@ func parameterRulesToSDK(rules []model.ParameterRule) ([]sdk.ParameterRule, erro
 	return sdkRules, nil
 }
 
-// parameterRuleConditionsToSDK converts model parameter rule conditions to SDK parameter rule conditions
-func parameterRuleConditionsToSDK(conditions []model.ParameterRuleCondition) ([]sdk.ParameterRuleCondition, error) {
-	sdkConditions := make([]sdk.ParameterRuleCondition, len(conditions))
+// parameterRuleConditionsToSDK converts model parameter rule conditions to SDK rule conditions
+func parameterRuleConditionsToSDK(conditions []model.ParameterRuleCondition) ([]sdk.RuleCondition, error) {
+	sdkConditions := make([]sdk.RuleCondition, len(conditions))
 
 	for i, condition := range conditions {
 		// Get attribute information if available
@@ -130,7 +130,7 @@ func parameterRuleConditionsToSDK(conditions []model.ParameterRuleCondition) ([]
 			attributeDataType = string(condition.Attribute.DataType)
 		}
 
-		sdkConditions[i] = sdk.ParameterRuleCondition{
+		sdkConditions[i] = sdk.RuleCondition{
 			ID:                condition.ID,
 			AttributeID:       condition.AttributeID,
 			Operator:          sdk.ConditionOperator(condition.Operator),

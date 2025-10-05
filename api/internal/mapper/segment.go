@@ -64,9 +64,9 @@ func segmentRulesToSDK(rules []model.SegmentRule) ([]sdk.SegmentRule, error) {
 	return sdkRules, nil
 }
 
-// segmentRuleConditionsToSDK converts model segment rule conditions to SDK segment rule conditions
-func segmentRuleConditionsToSDK(conditions []model.SegmentRuleCondition) ([]sdk.SegmentRuleCondition, error) {
-	sdkConditions := make([]sdk.SegmentRuleCondition, len(conditions))
+// segmentRuleConditionsToSDK converts model segment rule conditions to SDK rule conditions
+func segmentRuleConditionsToSDK(conditions []model.SegmentRuleCondition) ([]sdk.RuleCondition, error) {
+	sdkConditions := make([]sdk.RuleCondition, len(conditions))
 
 	for i, condition := range conditions {
 		// Get attribute information if available
@@ -80,7 +80,7 @@ func segmentRuleConditionsToSDK(conditions []model.SegmentRuleCondition) ([]sdk.
 			}
 		}
 
-		sdkConditions[i] = sdk.SegmentRuleCondition{
+		sdkConditions[i] = sdk.RuleCondition{
 			ID:                condition.ID,
 			AttributeID:       condition.AttributeID,
 			Operator:          sdk.ConditionOperator(condition.Operator),
