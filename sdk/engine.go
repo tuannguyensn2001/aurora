@@ -64,7 +64,10 @@ func (e *engine) evaluateRuleConditionEnum(condition *ParameterRuleCondition, at
 	if !ok {
 		return false
 	}
-	return slices.Contains(condition.EnumOptions, value)
+	if !slices.Contains(condition.EnumOptions, value) {
+		return false
+	}
+	return value == condition.Value
 }
 
 func (e *engine) evaluateRuleConditionString(condition *ParameterRuleCondition, attribute *attribute) bool {
