@@ -79,10 +79,6 @@ func parameterRulesToSDK(rules []model.ParameterRule) ([]sdk.ParameterRule, erro
 		}
 
 		// Handle segment ID conversion (pointer uint to int64)
-		var segmentID int64
-		if rule.SegmentID != nil {
-			segmentID = int64(*rule.SegmentID)
-		}
 
 		// Handle match type conversion (pointer to value)
 		var matchType sdk.ConditionMatchType
@@ -95,6 +91,17 @@ func parameterRulesToSDK(rules []model.ParameterRule) ([]sdk.ParameterRule, erro
 		if err != nil {
 			return nil, err
 		}
+		var segmentID int64
+		var segment *sdk.Segment
+		if rule.SegmentID != nil {
+			segmentID = int64(*rule.SegmentID)
+			segmentRaw, err := SegmentToSDK(rule.Segment)
+			if err != nil {
+				return nil, err
+			}
+			segment = &segmentRaw
+
+		}
 
 		sdkRules[i] = sdk.ParameterRule{
 			ID:           rule.ID,
@@ -104,6 +111,7 @@ func parameterRulesToSDK(rules []model.ParameterRule) ([]sdk.ParameterRule, erro
 			SegmentID:    segmentID,
 			MatchType:    matchType,
 			Conditions:   sdkConditions,
+			Segment:      segment,
 		}
 	}
 

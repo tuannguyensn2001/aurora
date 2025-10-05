@@ -53,6 +53,9 @@ func (r *repository) GetAllParameters(ctx context.Context, limit, offset int) ([
 		Preload("Conditions.Segment").
 		Preload("Rules").
 		Preload("Rules.Segment").
+		Preload("Rules.Segment.Rules").
+		Preload("Rules.Segment.Rules.Conditions").
+		Preload("Rules.Segment.Rules.Conditions.Attribute").
 		Preload("Rules.Conditions").
 		Preload("Rules.Conditions.Attribute").
 		Order("created_at DESC")
