@@ -37,10 +37,12 @@ type client struct {
 	path         string
 	db           *badger.DB
 	engine       *engine
+	endpointUrl  string
 }
 
 type ClientOptions struct {
 	S3BucketName string
+	EndpointUrl  string
 }
 
 type Option func(*client)
@@ -91,6 +93,7 @@ func (c *client) applyDefaults() {
 func NewClient(clientOptions ClientOptions, options ...Option) *client {
 	c := &client{
 		s3BucketName: clientOptions.S3BucketName,
+		endpointUrl:  clientOptions.EndpointUrl,
 	}
 	c.applyDefaults()
 	for _, option := range options {

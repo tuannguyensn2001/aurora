@@ -26,7 +26,6 @@ func NewApp(configPath string) *fx.App {
 		RepositoryModule,
 		ServiceModule,
 		HandlerModule,
-		EndpointModule,
 		ServerModule,
 		WorkerModule,
 		RiverModule,

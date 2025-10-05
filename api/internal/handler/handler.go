@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 
+	"api/config"
 	"api/internal/dto"
 	"api/internal/service"
 
@@ -11,11 +12,13 @@ import (
 
 type Handler struct {
 	service service.Service
+	config  *config.Config
 }
 
-func New(svc service.Service) *Handler {
+func New(svc service.Service, cfg *config.Config) *Handler {
 	return &Handler{
 		service: svc,
+		config:  cfg,
 	}
 }
 
@@ -452,4 +455,11 @@ func (h *Handler) SimulateParameter(ctx context.Context, req *dto.SimulateParame
 	}
 
 	return &response, nil
+}
+
+func (h *Handler) GetMetdataSDK(ctx context.Context, req *dto.GetMetadataSDKRequest) (*dto.GetMetadataSDKResponse, error) {
+	return &dto.GetMetadataSDKResponse{
+		EnableS3: h.config.S3.Enable,
+	}, nil
+
 }

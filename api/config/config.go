@@ -12,6 +12,7 @@ type Config struct {
 	Service struct {
 		Name string `yaml:"name"`
 		Env  string `yaml:"env"`
+		Port int    `yaml:"port"`
 	} `yaml:"service"`
 	Database struct {
 		Host     string `yaml:"host"`
@@ -22,6 +23,7 @@ type Config struct {
 		SSLMode  string `yaml:"sslmode"`
 	} `yaml:"database"`
 	S3 struct {
+		Enable     bool   `yaml:"enable"`
 		BucketName string `yaml:"bucketName"`
 	} `yaml:"s3"`
 }
