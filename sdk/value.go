@@ -92,3 +92,7 @@ func (rv RolloutValue) AsBool(defaultValue bool) bool {
 	}
 	return value
 }
+
+func (rv RolloutValue) raw() *string {
+	return rv.value
+}

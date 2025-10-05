@@ -87,6 +87,7 @@ type AuroraClient struct {
 	engine       *engine
 	endpointUrl  string
 	enableS3     bool
+	onEvaluate   func(source string, parameterName string, attribute *Attribute, rolloutValueRaw *string, err error)
 }
 
 // ClientOptions holds the required configuration options for the client
@@ -137,6 +138,12 @@ func WithPath(path string) Option {
 func WithEnableS3(enableS3 bool) Option {
 	return func(c *AuroraClient) {
 		c.enableS3 = enableS3
+	}
+}
+
+func WithOnEvaluate(onEvaluate func(source string, parameterName string, attribute *Attribute, rolloutValueRaw *string, err error)) Option {
+	return func(c *AuroraClient) {
+		c.onEvaluate = onEvaluate
 	}
 }
 
@@ -330,7 +337,13 @@ func (c *AuroraClient) persistParameters(ctx context.Context, parameters []Param
 // EvaluateParameter evaluates a parameter against the given attributes
 func (c *AuroraClient) EvaluateParameter(ctx context.Context, parameterName string, attribute *Attribute) RolloutValue {
 
-	return c.resolveFromParameter(ctx, parameterName, attribute)
+	res := c.resolveFromParameter(ctx, parameterName, attribute)
+
+	if c.onEvaluate != nil {
+
+		c.onEvaluate("parameter", parameterName, attribute, res.raw(), res.Error())
+	}
+	return res
 }
 
 func (c *AuroraClient) resolveFromParameter(ctx context.Context, parameterName string, attribute *Attribute) RolloutValue {
