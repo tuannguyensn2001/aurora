@@ -88,6 +88,12 @@ func (s *service) CreateExperiment(ctx context.Context, req *dto.CreateExperimen
 	if exp != nil {
 		return "", fmt.Errorf("experiment with name %s already exists", req.Name)
 	}
+
+	_, err = s.repo.GetSegmentByID(ctx, uint(req.SegmentID))
+	if err != nil {
+		return "", fmt.Errorf("segment with id %d not found", req.SegmentID)
+	}
+
 	// Start a transaction
 	tx := s.repo.GetDB().Begin()
 	if tx.Error != nil {
@@ -116,6 +122,7 @@ func (s *service) CreateExperiment(ctx context.Context, req *dto.CreateExperimen
 		CreatedAt:       now,
 		UpdatedAt:       now,
 		Status:          "draft", // Default status
+		SegmentID:       req.SegmentID,
 	}
 
 	// Use transaction context

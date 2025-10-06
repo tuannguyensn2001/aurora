@@ -19,7 +19,12 @@ func (r *repository) CreateExperiment(ctx context.Context, experiment *model.Exp
 // GetExperimentByID retrieves an experiment by ID
 func (r *repository) GetExperimentByID(ctx context.Context, id uint) (*model.Experiment, error) {
 	var experiment model.Experiment
-	err := r.db.WithContext(ctx).First(&experiment, id).Error
+	err := r.db.WithContext(ctx).
+		Preload("Segment").
+		Preload("Segment.Rules").
+		Preload("Segment.Rules.Conditions").
+		Preload("Segment.Rules.Conditions.Attribute").
+		First(&experiment, id).Error
 	if err != nil {
 		return nil, err
 	}

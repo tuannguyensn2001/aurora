@@ -465,13 +465,10 @@ func (h *Handler) GetMetdataSDK(ctx context.Context, req *dto.GetMetadataSDKRequ
 }
 
 func (h *Handler) GetAllParametersSDK(ctx context.Context, req *dto.GetAllParametersSDKRequest) (*dto.GetAllParametersSDKResponse, error) {
-	logger := log.Ctx(ctx).With().Str("handler", "get-all-parameters-sdk").Logger()
 	parameters, err := h.service.GetAllParametersSDK(ctx)
 	if err != nil {
 		return nil, err
 	}
-
-	logger.Debug().Int("parameters_count", len(parameters)).Msg("Found parameters to return")
 
 	return &dto.GetAllParametersSDKResponse{
 		Parameters: parameters,

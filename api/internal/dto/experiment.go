@@ -18,6 +18,7 @@ type CreateExperimentRequest struct {
 	PopulationSize  int                              `json:"populationSize" binding:"required" validate:"required,min=1,max=100"`
 	Strategy        string                           `json:"strategy" binding:"required" validate:"required,oneof=percentage_split"`
 	Variants        []CreateExperimentVariantRequest `json:"variants" binding:"required" validate:"required"`
+	SegmentID       int                              `json:"segmentId" binding:"required" validate:"required"`
 }
 
 func (r *CreateExperimentRequest) Validate() error {
@@ -81,6 +82,7 @@ type ExperimentResponse struct {
 	CreatedAt       int64  `json:"createdAt"`
 	UpdatedAt       int64  `json:"updatedAt"`
 	Status          string `json:"status"`
+	SegmentID       int    `json:"segmentId"`
 }
 
 // HashAttributeResponse represents the hash attribute in experiment responses
@@ -127,6 +129,8 @@ type ExperimentDetailResponse struct {
 	CreatedAt       int64                       `json:"createdAt"`
 	UpdatedAt       int64                       `json:"updatedAt"`
 	Status          string                      `json:"status"`
+	SegmentID       int                         `json:"segmentId"`
+	Segment         SegmentResponse             `json:"segment"`
 	Variants        []ExperimentVariantResponse `json:"variants"`
 }
 
@@ -146,6 +150,7 @@ func ToExperimentResponse(experiment *model.Experiment) ExperimentResponse {
 		CreatedAt:       experiment.CreatedAt,
 		UpdatedAt:       experiment.UpdatedAt,
 		Status:          experiment.Status,
+		SegmentID:       experiment.SegmentID,
 	}
 }
 
@@ -196,7 +201,7 @@ func ToExperimentDetailResponse(experiment *model.Experiment, variants []*model.
 		hashAttrResponse.Name = hashAttribute.Name
 	}
 
-	return ExperimentDetailResponse{
+	res := ExperimentDetailResponse{
 		ID:              experiment.ID,
 		Name:            experiment.Name,
 		Uuid:            experiment.Uuid,
@@ -211,8 +216,14 @@ func ToExperimentDetailResponse(experiment *model.Experiment, variants []*model.
 		CreatedAt:       experiment.CreatedAt,
 		UpdatedAt:       experiment.UpdatedAt,
 		Status:          experiment.Status,
-		Variants:        variantResponses,
+		SegmentID:       experiment.SegmentID,
+		//Segment:         ToSegmentResponse(experiment.Segment),
+		Variants: variantResponses,
 	}
+	if experiment.SegmentID > 0 {
+		res.Segment = ToSegmentResponse(experiment.Segment)
+	}
+	return res
 }
 
 // RejectExperimentRequest represents the request to reject an experiment

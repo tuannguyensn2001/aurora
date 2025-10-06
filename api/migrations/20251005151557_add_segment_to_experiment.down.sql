@@ -1,0 +1,1 @@
+alter table experiments drop column segment_id;

@@ -1,0 +1,1 @@
+alter table experiments add column segment_id integer;

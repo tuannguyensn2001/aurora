@@ -8,12 +8,14 @@ type Experiment struct {
 	Description     string `json:"description"`
 	StartDate       int64  `json:"startDate"`
 	EndDate         int64
-	HashAttributeID int    `json:"hashAttributeId"`
-	PopulationSize  int    `json:"populationSize"`
-	Strategy        string `json:"strategy"`
-	CreatedAt       int64  `json:"createdAt"`
-	UpdatedAt       int64  `json:"updatedAt"`
-	Status          string `json:"status"`
+	HashAttributeID int      `json:"hashAttributeId"`
+	PopulationSize  int      `json:"populationSize"`
+	Strategy        string   `json:"strategy"`
+	CreatedAt       int64    `json:"createdAt"`
+	UpdatedAt       int64    `json:"updatedAt"`
+	Status          string   `json:"status"`
+	SegmentID       int      `json:"segmentId"`
+	Segment         *Segment `json:"segment,omitempty"`
 }
 
 func (e *Experiment) TableName() string {

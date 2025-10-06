@@ -20,7 +20,7 @@ migrate-version:
 
 # Create new migration file
 migrate-create:
-	@migrate create -ext sql -dir api/migrations -seq $(NAME)
+	@migrate create -ext sql -dir api/migrations  $(NAME)
 
 # Docker commands
 docker-up:
