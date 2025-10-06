@@ -18,7 +18,7 @@ type CreateExperimentRequest struct {
 	PopulationSize  int                              `json:"populationSize" binding:"required" validate:"required,min=1,max=100"`
 	Strategy        string                           `json:"strategy" binding:"required" validate:"required,oneof=percentage_split"`
 	Variants        []CreateExperimentVariantRequest `json:"variants" binding:"required" validate:"required"`
-	SegmentID       int                              `json:"segmentId" binding:"required" validate:"required"`
+	SegmentID       int                              `json:"segmentId" `
 }
 
 func (r *CreateExperimentRequest) Validate() error {

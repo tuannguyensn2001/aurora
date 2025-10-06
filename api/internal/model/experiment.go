@@ -8,14 +8,16 @@ type Experiment struct {
 	Description     string `json:"description"`
 	StartDate       int64  `json:"startDate"`
 	EndDate         int64
-	HashAttributeID int      `json:"hashAttributeId"`
-	PopulationSize  int      `json:"populationSize"`
-	Strategy        string   `json:"strategy"`
-	CreatedAt       int64    `json:"createdAt"`
-	UpdatedAt       int64    `json:"updatedAt"`
-	Status          string   `json:"status"`
-	SegmentID       int      `json:"segmentId"`
-	Segment         *Segment `json:"segment,omitempty"`
+	HashAttributeID int                 `json:"hashAttributeId"`
+	PopulationSize  int                 `json:"populationSize"`
+	Strategy        string              `json:"strategy"`
+	CreatedAt       int64               `json:"createdAt"`
+	UpdatedAt       int64               `json:"updatedAt"`
+	Status          string              `json:"status"`
+	SegmentID       int                 `json:"segmentId"`
+	Segment         *Segment            `json:"segment,omitempty"`
+	HashAttribute   *Attribute          `json:"hashAttribute,omitempty"`
+	Variants        []ExperimentVariant `json:"variants"`
 }
 
 func (e *Experiment) TableName() string {
@@ -23,13 +25,14 @@ func (e *Experiment) TableName() string {
 }
 
 type ExperimentVariant struct {
-	ID                int    `json:"id"`
-	ExperimentID      int    `json:"experimentId"`
-	Name              string `json:"name"`
-	Description       string `json:"description"`
-	CreatedAt         int64  `json:"createdAt"`
-	UpdatedAt         int64  `json:"updatedAt"`
-	TrafficAllocation int    `json:"trafficAllocation"`
+	ID                int                          `json:"id"`
+	ExperimentID      int                          `json:"experimentId"`
+	Name              string                       `json:"name"`
+	Description       string                       `json:"description"`
+	CreatedAt         int64                        `json:"createdAt"`
+	UpdatedAt         int64                        `json:"updatedAt"`
+	TrafficAllocation int                          `json:"trafficAllocation"`
+	Parameters        []ExperimentVariantParameter `json:"parameters"`
 }
 
 func (e *ExperimentVariant) TableName() string {

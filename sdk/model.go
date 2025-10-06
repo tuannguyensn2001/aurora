@@ -109,3 +109,35 @@ type Segment struct {
 	UpdatedAt   time.Time     `gorm:"autoUpdateTime" json:"updatedAt"`
 	Rules       []SegmentRule `gorm:"foreignKey:SegmentID" json:"rules"`
 }
+
+type Experiment struct {
+	ID              int                 `json:"id"`
+	Name            string              `json:"name"`
+	Uuid            string              `json:"uuid"`
+	StartDate       int64               `json:"startDate"`
+	EndDate         int64               `json:"endDate"`
+	HashAttributeID int                 `json:"hashAttributeId"`
+	PopulationSize  int                 `json:"populationSize"`
+	Strategy        string              `json:"strategy"`
+	Status          string              `json:"status"`
+	SegmentID       int                 `json:"segmentId"`
+	Segment         *Segment            `json:"segment,omitempty"`
+	Variants        []ExperimentVariant `json:"variants"`
+}
+
+type ExperimentVariant struct {
+	ID                int                          `json:"id"`
+	ExperimentID      int                          `json:"experimentId"`
+	Name              string                       `json:"name"`
+	Description       string                       `json:"description"`
+	TrafficAllocation int                          `json:"trafficAllocation"`
+	Parameters        []ExperimentVariantParameter `json:"parameters"`
+}
+
+type ExperimentVariantParameter struct {
+	ID                int    `json:"id"`
+	ParameterDataType string `json:"parameterDataType"`
+	ParameterID       int    `json:"parameterId"`
+	ParameterName     string `json:"parameterName"`
+	RolloutValue      string `json:"rolloutValue"`
+}

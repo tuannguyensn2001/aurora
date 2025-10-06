@@ -3,6 +3,7 @@ package fx
 import (
 	"api/config"
 	"context"
+	"fmt"
 	"log/slog"
 	"sdk"
 	"time"
@@ -18,7 +19,7 @@ type SDKParams struct {
 func ProvideSDK(lc fx.Lifecycle, params SDKParams) sdk.Client {
 	client, err := sdk.NewClient(sdk.ClientOptions{
 		S3BucketName: params.Cfg.S3.BucketName,
-		EndpointURL:  "http://localhost:9000",
+		EndpointURL:  fmt.Sprintf("http://localhost:%d", params.Cfg.Service.Port),
 	},
 		sdk.WithPath("sdk-dump"),
 		sdk.WithLogLevel(slog.LevelError),

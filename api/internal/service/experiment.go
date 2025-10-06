@@ -1,6 +1,7 @@
 package service
 
 import (
+	"api/internal/constant"
 	"api/internal/dto"
 	"api/internal/model"
 	"context"
@@ -89,9 +90,11 @@ func (s *service) CreateExperiment(ctx context.Context, req *dto.CreateExperimen
 		return "", fmt.Errorf("experiment with name %s already exists", req.Name)
 	}
 
-	_, err = s.repo.GetSegmentByID(ctx, uint(req.SegmentID))
-	if err != nil {
-		return "", fmt.Errorf("segment with id %d not found", req.SegmentID)
+	if req.SegmentID != 0 {
+		_, err = s.repo.GetSegmentByID(ctx, uint(req.SegmentID))
+		if err != nil {
+			return "", fmt.Errorf("segment with id %d not found", req.SegmentID)
+		}
 	}
 
 	// Start a transaction
@@ -121,7 +124,7 @@ func (s *service) CreateExperiment(ctx context.Context, req *dto.CreateExperimen
 		Strategy:        req.Strategy,
 		CreatedAt:       now,
 		UpdatedAt:       now,
-		Status:          "draft", // Default status
+		Status:          constant.ExperimentStatusDraft, // Default status
 		SegmentID:       req.SegmentID,
 	}
 
@@ -183,46 +186,41 @@ func (s *service) GetAllExperiments(ctx context.Context) ([]*model.Experiment, e
 
 // GetExperimentByID retrieves an experiment by ID with all variants and their parameters
 func (s *service) GetExperimentByID(ctx context.Context, id uint) (*model.Experiment, []*model.ExperimentVariant, map[int][]*model.ExperimentVariantParameter, *model.Attribute, error) {
-	// Get the experiment
+	// Get the experiment with all preloaded data
 	experiment, err := s.repo.GetExperimentByID(ctx, id)
 	if err != nil {
 		return nil, nil, nil, nil, fmt.Errorf("failed to get experiment: %w", err)
 	}
 
-	// Get the hash attribute
-	hashAttribute, err := s.repo.GetAttributeByID(ctx, uint(experiment.HashAttributeID))
-	if err != nil {
-		return nil, nil, nil, nil, fmt.Errorf("failed to get hash attribute: %w", err)
+	// Convert variants slice to pointer slice for compatibility
+	variants := make([]*model.ExperimentVariant, len(experiment.Variants))
+	for i, variant := range experiment.Variants {
+		variants[i] = &variant
 	}
 
-	// Get all variants for this experiment
-	variants, err := s.repo.GetExperimentVariantsByExperimentID(ctx, id)
-	if err != nil {
-		return nil, nil, nil, nil, fmt.Errorf("failed to get experiment variants: %w", err)
-	}
-
-	// Get parameters for each variant
+	// Build parameters map from preloaded data
 	variantParametersMap := make(map[int][]*model.ExperimentVariantParameter)
-	for _, variant := range variants {
-		parameters, err := s.repo.GetExperimentVariantParametersByVariantID(ctx, uint(variant.ID))
-		if err != nil {
-			return nil, nil, nil, nil, fmt.Errorf("failed to get variant parameters for variant %d: %w", variant.ID, err)
+	for _, variant := range experiment.Variants {
+		parameters := make([]*model.ExperimentVariantParameter, len(variant.Parameters))
+		for i, param := range variant.Parameters {
+			parameters[i] = &param
 		}
 		variantParametersMap[variant.ID] = parameters
 	}
 
-	if experiment.Status == "schedule" {
+	// Update experiment status based on dates
+	if experiment.Status == constant.ExperimentStatusSchedule {
 		if experiment.StartDate < time.Now().Unix() {
-			experiment.Status = "running"
+			experiment.Status = constant.ExperimentStatusRunning
 			experiment.UpdatedAt = time.Now().Unix()
 			err = s.repo.UpdateExperiment(ctx, experiment)
 			if err != nil {
 				return nil, nil, nil, nil, fmt.Errorf("failed to update experiment: %w", err)
 			}
 		}
-	} else if experiment.Status == "running" {
+	} else if experiment.Status == constant.ExperimentStatusRunning {
 		if experiment.EndDate < time.Now().Unix() {
-			experiment.Status = "finish"
+			experiment.Status = constant.ExperimentStatusFinish
 			experiment.UpdatedAt = time.Now().Unix()
 			err = s.repo.UpdateExperiment(ctx, experiment)
 			if err != nil {
@@ -231,7 +229,7 @@ func (s *service) GetExperimentByID(ctx context.Context, id uint) (*model.Experi
 		}
 	}
 
-	return experiment, variants, variantParametersMap, hashAttribute, nil
+	return experiment, variants, variantParametersMap, experiment.HashAttribute, nil
 }
 
 // RejectExperiment rejects an experiment by updating its status to "cancel"
@@ -243,24 +241,12 @@ func (s *service) RejectExperiment(ctx context.Context, id uint, req *dto.Reject
 	}
 
 	// Check if experiment can be rejected (business logic based on ExperimentStatus enum)
-	if experiment.Status == "cancel" {
-		return nil, fmt.Errorf("experiment is already canceled")
-	}
-
-	if experiment.Status == "abort" {
-		return nil, fmt.Errorf("experiment is already aborted")
-	}
-
-	if experiment.Status == "running" {
-		return nil, fmt.Errorf("cannot reject a running experiment")
-	}
-
-	if experiment.Status == "finish" {
-		return nil, fmt.Errorf("cannot reject a finished experiment")
+	if experiment.Status != constant.ExperimentStatusDraft {
+		return nil, fmt.Errorf("experiment is not in draft status")
 	}
 
 	// Update the experiment status to cancel (reject)
-	experiment.Status = "cancel"
+	experiment.Status = constant.ExperimentStatusCancel
 	experiment.UpdatedAt = time.Now().Unix()
 
 	// Save the updated experiment
@@ -280,29 +266,12 @@ func (s *service) ApproveExperiment(ctx context.Context, id uint, req *dto.Appro
 		return nil, fmt.Errorf("failed to get experiment: %w", err)
 	}
 
-	// Check if experiment can be approved (business logic based on ExperimentStatus enum)
-	if experiment.Status == "cancel" {
-		return nil, fmt.Errorf("cannot approve a canceled experiment")
-	}
-
-	if experiment.Status == "abort" {
-		return nil, fmt.Errorf("cannot approve an aborted experiment")
-	}
-
-	if experiment.Status == "running" {
-		return nil, fmt.Errorf("experiment is already running")
-	}
-
-	if experiment.Status == "finish" {
-		return nil, fmt.Errorf("cannot approve a finished experiment")
-	}
-
-	if experiment.Status == "approved" {
-		return nil, fmt.Errorf("experiment is already approved")
+	if experiment.Status != constant.ExperimentStatusDraft {
+		return nil, fmt.Errorf("experiment is not in draft status")
 	}
 
 	// Update the experiment status to approved
-	experiment.Status = "schedule"
+	experiment.Status = constant.ExperimentStatusSchedule
 	experiment.UpdatedAt = time.Now().Unix()
 
 	// Save the updated experiment
@@ -323,24 +292,31 @@ func (s *service) AbortExperiment(ctx context.Context, id uint, req *dto.AbortEx
 	}
 
 	// Check if experiment can be aborted (business logic based on ExperimentStatus enum)
-	if experiment.Status == "cancel" {
-		return nil, fmt.Errorf("cannot abort a canceled experiment")
-	}
+	// if experiment.Status == constant.ExperimentStatusCancel {
+	// 	return nil, fmt.Errorf("cannot abort a canceled experiment")
+	// }
 
-	if experiment.Status == "abort" {
-		return nil, fmt.Errorf("experiment is already aborted")
-	}
+	// if experiment.Status == constant.ExperimentStatusAbort {
+	// 	return nil, fmt.Errorf("experiment is already aborted")
+	// }
 
-	if experiment.Status == "finish" {
-		return nil, fmt.Errorf("cannot abort a finished experiment")
-	}
+	// if experiment.Status == constant.ExperimentStatusFinish {
+	// 	return nil, fmt.Errorf("cannot abort a finished experiment")
+	// }
 
-	if experiment.Status == "draft" {
-		return nil, fmt.Errorf("cannot abort a draft experiment, reject it instead")
+	// if experiment.Status == constant.ExperimentStatusDraft {
+	// 	return nil, fmt.Errorf("cannot abort a draft experiment, reject it instead")
+	// }
+
+	if experiment.Status != constant.ExperimentStatusSchedule {
+		return nil, fmt.Errorf("experiment is not in schedule status")
+	}
+	if experiment.Status != constant.ExperimentStatusRunning {
+		return nil, fmt.Errorf("experiment is not in running status")
 	}
 
 	// Update the experiment status to abort
-	experiment.Status = "abort"
+	experiment.Status = constant.ExperimentStatusAbort
 	experiment.UpdatedAt = time.Now().Unix()
 
 	// Save the updated experiment
