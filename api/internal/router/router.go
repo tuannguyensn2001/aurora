@@ -89,6 +89,7 @@ func (r *Router) SetupRoutes(engine *gin.Engine) {
 		{
 			sdk.POST("/metadata", r.getMetadataSDK)
 			sdk.POST("/parameters", r.getAllParametersSDK)
+			sdk.POST("/experiments", r.getAllExperimentsSDK)
 		}
 	}
 }
@@ -628,4 +629,20 @@ func (r *Router) getAllParametersSDK(c *gin.Context) {
 
 	c.JSON(http.StatusOK, result)
 
+}
+
+func (r *Router) getAllExperimentsSDK(c *gin.Context) {
+	var req dto.GetAllExperimentsSDKRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.Error(err)
+		return
+	}
+
+	result, err := r.handler.GetAllExperimentsSDK(c.Request.Context(), &req)
+	if err != nil {
+		c.Error(err)
+		return
+	}
+
+	c.JSON(http.StatusOK, result)
 }

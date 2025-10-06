@@ -474,3 +474,14 @@ func (h *Handler) GetAllParametersSDK(ctx context.Context, req *dto.GetAllParame
 		Parameters: parameters,
 	}, nil
 }
+
+func (h *Handler) GetAllExperimentsSDK(ctx context.Context, req *dto.GetAllExperimentsSDKRequest) (*dto.GetAllExperimentsSDKResponse, error) {
+	experiments, err := h.service.GetActiveExperimentsSDK(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return &dto.GetAllExperimentsSDKResponse{
+		Experiments: experiments,
+	}, nil
+}

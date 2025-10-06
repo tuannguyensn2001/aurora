@@ -54,6 +54,7 @@ type Service interface {
 	ApproveExperiment(ctx context.Context, id uint, req *dto.ApproveExperimentRequest) (*model.Experiment, error)
 	AbortExperiment(ctx context.Context, id uint, req *dto.AbortExperimentRequest) (*model.Experiment, error)
 	SimulateParameter(ctx context.Context, req *dto.SimulateParameterRequest) (dto.SimulateParameterResponse, error)
+	GetActiveExperimentsSDK(ctx context.Context) ([]sdk.Experiment, error)
 }
 
 // service implements Service

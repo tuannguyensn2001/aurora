@@ -3,10 +3,12 @@ package service
 import (
 	"api/internal/constant"
 	"api/internal/dto"
+	"api/internal/mapper"
 	"api/internal/model"
 	"context"
 	"errors"
 	"fmt"
+	"sdk"
 	"time"
 
 	"github.com/google/uuid"
@@ -255,6 +257,8 @@ func (s *service) RejectExperiment(ctx context.Context, id uint, req *dto.Reject
 		return nil, fmt.Errorf("failed to update experiment: %w", err)
 	}
 
+	s.riverClient.Insert(ctx, dto.SyncExperimentArgs{}, nil)
+
 	return experiment, nil
 }
 
@@ -279,6 +283,8 @@ func (s *service) ApproveExperiment(ctx context.Context, id uint, req *dto.Appro
 	if err != nil {
 		return nil, fmt.Errorf("failed to update experiment: %w", err)
 	}
+
+	s.riverClient.Insert(ctx, dto.SyncExperimentArgs{}, nil)
 
 	return experiment, nil
 }
@@ -325,5 +331,23 @@ func (s *service) AbortExperiment(ctx context.Context, id uint, req *dto.AbortEx
 		return nil, fmt.Errorf("failed to update experiment: %w", err)
 	}
 
+	s.riverClient.Insert(ctx, dto.SyncExperimentArgs{}, nil)
+
 	return experiment, nil
+}
+
+func (s *service) GetActiveExperimentsSDK(ctx context.Context) ([]sdk.Experiment, error) {
+	experiments, err := s.repo.GetExperimentsActive(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get active experiments: %w", err)
+	}
+
+	result := make([]sdk.Experiment, len(experiments))
+	for i, experiment := range experiments {
+		result[i], err = mapper.ExperimentToSDK(&experiment)
+		if err != nil {
+			return nil, fmt.Errorf("failed to convert experiment to sdk: %w", err)
+		}
+	}
+	return result, nil
 }

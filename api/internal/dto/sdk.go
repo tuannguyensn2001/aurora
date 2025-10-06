@@ -15,3 +15,10 @@ type GetAllParametersSDKRequest struct {
 type GetAllParametersSDKResponse struct {
 	Parameters []sdk.Parameter `json:"parameters"`
 }
+
+type GetAllExperimentsSDKRequest struct {
+}
+
+type GetAllExperimentsSDKResponse struct {
+	Experiments []sdk.Experiment `json:"experiments"`
+}

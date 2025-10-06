@@ -4,6 +4,8 @@ import (
 	"api/internal/model"
 	"context"
 
+	"api/internal/constant"
+
 	"gorm.io/gorm"
 )
 
@@ -133,4 +135,18 @@ func (r *repository) GetExperimentByName(ctx context.Context, name string) (*mod
 		return nil, err
 	}
 	return &experiment, nil
+}
+
+func (r *repository) GetExperimentsActive(ctx context.Context) ([]model.Experiment, error) {
+
+	result := make([]model.Experiment, 0)
+	err := r.db.WithContext(ctx).
+		Where("status in (?)", []string{constant.ExperimentStatusSchedule, constant.ExperimentStatusRunning}).
+		Preload("Variants").
+		Preload("Variants.Parameters").
+		Find(&result).Error
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
 }

@@ -24,6 +24,11 @@ func ProvideWorker(params WorkerParams) *river.Workers {
 		Cfg:        *params.Cfg,
 		S3:         params.S3,
 	})
+	river.AddWorker(workers, &internalWorkers.SyncExperimentWorker{
+		Repository: params.Repository,
+		Cfg:        *params.Cfg,
+		S3:         params.S3,
+	})
 	return workers
 }
 
