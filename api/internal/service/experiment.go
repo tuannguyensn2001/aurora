@@ -314,11 +314,8 @@ func (s *service) AbortExperiment(ctx context.Context, id uint, req *dto.AbortEx
 	// 	return nil, fmt.Errorf("cannot abort a draft experiment, reject it instead")
 	// }
 
-	if experiment.Status != constant.ExperimentStatusSchedule {
+	if experiment.Status != constant.ExperimentStatusSchedule && experiment.Status != constant.ExperimentStatusRunning {
 		return nil, fmt.Errorf("experiment is not in schedule status")
-	}
-	if experiment.Status != constant.ExperimentStatusRunning {
-		return nil, fmt.Errorf("experiment is not in running status")
 	}
 
 	// Update the experiment status to abort
