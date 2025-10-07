@@ -51,6 +51,8 @@ type Repository interface {
 	DecrementParameterUsageCount(ctx context.Context, id uint) error
 	CountParameters(ctx context.Context) (int64, error)
 	GetParametersByIDs(ctx context.Context, ids []int) ([]model.Parameter, error)
+	GetAllParametersForSDK(ctx context.Context) ([]*model.Parameter, error)
+	UpdateParameterRawValue(ctx context.Context, id uint) error
 
 	// Parameter Rule operations
 	CreateParameterRule(ctx context.Context, rule *model.ParameterRule) error
@@ -91,6 +93,7 @@ type Repository interface {
 	DeleteExperimentVariantParametersByVariantID(ctx context.Context, variantID uint) error
 	GetExperimentByName(ctx context.Context, name string) (*model.Experiment, error)
 	GetExperimentsActive(ctx context.Context) ([]model.Experiment, error)
+	UpdateExperimentRawValue(ctx context.Context, id uint) error
 
 	// Database access for transactions
 	GetDB() *gorm.DB

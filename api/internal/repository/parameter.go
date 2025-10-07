@@ -191,3 +191,44 @@ func (r *repository) GetParametersByIDs(ctx context.Context, ids []int) ([]model
 	err := r.db.WithContext(ctx).Where("id IN ?", ids).Find(&parameters).Error
 	return parameters, err
 }
+
+// GetAllParametersForSDK retrieves all parameters with only raw_value for SDK conversion
+// This is optimized for SDK usage since raw_value already contains all necessary data
+func (r *repository) GetAllParametersForSDK(ctx context.Context) ([]*model.Parameter, error) {
+	var parameters []*model.Parameter
+	err := r.db.WithContext(ctx).
+		Select("id, raw_value").
+		Order("id").
+		Find(&parameters).Error
+	return parameters, err
+}
+
+// UpdateParameterRawValue updates the raw_value field for a parameter after loading all related data
+func (r *repository) UpdateParameterRawValue(ctx context.Context, id uint) error {
+	// Get the parameter with all related data loaded
+	var parameter model.Parameter
+	err := r.db.WithContext(ctx).
+		Preload("Conditions").
+		Preload("Conditions.Segment").
+		Preload("Rules").
+		Preload("Rules.Segment").
+		Preload("Rules.Segment.Rules").
+		Preload("Rules.Segment.Rules.Conditions").
+		Preload("Rules.Segment.Rules.Conditions.Attribute").
+		Preload("Rules.Conditions").
+		Preload("Rules.Conditions.Attribute").
+		First(&parameter, id).Error
+	if err != nil {
+		return err
+	}
+
+	// Populate raw value with all related data
+	if err := parameter.PopulateRawValue(); err != nil {
+		return err
+	}
+
+	// Update only the raw_value field
+	return r.db.WithContext(ctx).Model(&parameter).Select("raw_value").Updates(map[string]interface{}{
+		"raw_value": parameter.RawValue,
+	}).Error
+}

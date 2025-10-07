@@ -1,5 +1,9 @@
 package model
 
+import (
+	"encoding/json"
+)
+
 type Experiment struct {
 	ID              int    `json:"id"`
 	Name            string `json:"name"`
@@ -15,6 +19,7 @@ type Experiment struct {
 	UpdatedAt       int64               `json:"updatedAt"`
 	Status          string              `json:"status"`
 	SegmentID       int                 `json:"segmentId"`
+	RawValue        json.RawMessage     `gorm:"type:jsonb;column:raw_value" json:"rawValue,omitempty"`
 	Segment         *Segment            `json:"segment,omitempty"`
 	HashAttribute   *Attribute          `json:"hashAttribute,omitempty"`
 	Variants        []ExperimentVariant `json:"variants"`
@@ -22,6 +27,40 @@ type Experiment struct {
 
 func (e *Experiment) TableName() string {
 	return "experiments"
+}
+
+// PopulateRawValue creates a JSON representation of the experiment with all related fields
+// This should be called after all related entities are loaded via preloads
+func (e *Experiment) PopulateRawValue() error {
+	// Create a map with all experiment fields for JSON serialization
+	rawData := map[string]interface{}{
+		"id":              e.ID,
+		"name":            e.Name,
+		"uuid":            e.Uuid,
+		"hypothesis":      e.Hypothesis,
+		"description":     e.Description,
+		"startDate":       e.StartDate,
+		"endDate":         e.EndDate,
+		"hashAttributeId": e.HashAttributeID,
+		"populationSize":  e.PopulationSize,
+		"strategy":        e.Strategy,
+		"createdAt":       e.CreatedAt,
+		"updatedAt":       e.UpdatedAt,
+		"status":          e.Status,
+		"segmentId":       e.SegmentID,
+		"segment":         e.Segment,
+		"hashAttribute":   e.HashAttribute,
+		"variants":        e.Variants,
+	}
+
+	// Marshal to JSON
+	rawJSON, err := json.Marshal(rawData)
+	if err != nil {
+		return err
+	}
+
+	e.RawValue = json.RawMessage(rawJSON)
+	return nil
 }
 
 type ExperimentVariant struct {

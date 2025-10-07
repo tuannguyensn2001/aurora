@@ -71,6 +71,7 @@ type Parameter struct {
 	UsageCount          int                  `gorm:"not null;default:0" json:"usageCount"`
 	CreatedAt           time.Time            `gorm:"autoCreateTime" json:"createdAt"`
 	UpdatedAt           time.Time            `gorm:"autoUpdateTime" json:"updatedAt"`
+	RawValue            json.RawMessage      `gorm:"type:jsonb;column:raw_value" json:"rawValue,omitempty"`
 	Conditions          []ParameterCondition `gorm:"foreignKey:ParameterID" json:"conditions"`
 	Rules               []ParameterRule      `gorm:"foreignKey:ParameterID" json:"rules"`
 }
@@ -99,6 +100,33 @@ func (p *Parameter) validate() error {
 	default:
 		return gorm.ErrInvalidData
 	}
+}
+
+// PopulateRawValue creates a JSON representation of the parameter with all related fields
+// This should be called after all related entities are loaded via preloads
+func (p *Parameter) PopulateRawValue() error {
+	// Create a map with all parameter fields for JSON serialization
+	rawData := map[string]interface{}{
+		"id":                  p.ID,
+		"name":                p.Name,
+		"description":         p.Description,
+		"dataType":            p.DataType,
+		"defaultRolloutValue": p.DefaultRolloutValue,
+		"usageCount":          p.UsageCount,
+		"createdAt":           p.CreatedAt,
+		"updatedAt":           p.UpdatedAt,
+		"conditions":          p.Conditions,
+		"rules":               p.Rules,
+	}
+
+	// Marshal to JSON
+	rawJSON, err := json.Marshal(rawData)
+	if err != nil {
+		return err
+	}
+
+	p.RawValue = json.RawMessage(rawJSON)
+	return nil
 }
 
 // ParameterCondition represents the parameter_conditions table (legacy support)

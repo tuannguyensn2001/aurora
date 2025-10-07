@@ -45,6 +45,12 @@ func (s *service) CreateParameter(ctx context.Context, req *dto.CreateParameterR
 		return nil, err
 	}
 
+	// Update raw_value field with all related data
+	if err := s.repo.UpdateParameterRawValue(ctx, parameter.ID); err != nil {
+		// Log error but don't fail the creation
+		log.Ctx(ctx).Error().Err(err).Uint("parameterId", parameter.ID).Msg("Failed to update parameter raw_value")
+	}
+
 	return parameter, nil
 }
 
@@ -150,6 +156,12 @@ func (s *service) UpdateParameter(ctx context.Context, id uint, req *dto.UpdateP
 
 	if err := s.repo.UpdateParameter(ctx, parameter); err != nil {
 		return nil, err
+	}
+
+	// Update raw_value field with all related data
+	if err := s.repo.UpdateParameterRawValue(ctx, parameter.ID); err != nil {
+		// Log error but don't fail the update
+		logger.Error().Err(err).Uint("parameterId", parameter.ID).Msg("Failed to update parameter raw_value")
 	}
 
 	logger.Info().Msg("Enqueuing sync parameter job")
@@ -687,10 +699,12 @@ func (s *service) SimulateParameter(ctx context.Context, req *dto.SimulateParame
 }
 
 func (s *service) GetAllParametersSDK(ctx context.Context) ([]sdk.Parameter, error) {
-	parameters, err := s.repo.GetAllParameters(ctx, 0, 0)
+	// Use optimized method that only queries id and raw_value fields
+	// This avoids expensive preloading since raw_value contains all necessary data
+	parameters, err := s.repo.GetAllParametersForSDK(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	return mapper.ParametersToSDK(parameters)
+	return mapper.ParametersToSDKFromRawValue(parameters)
 }

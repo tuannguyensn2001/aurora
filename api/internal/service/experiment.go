@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/rs/zerolog/log"
 	"gorm.io/gorm"
 )
 
@@ -178,6 +179,12 @@ func (s *service) CreateExperiment(ctx context.Context, req *dto.CreateExperimen
 		return "", fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
+	// Update raw_value field with all related data
+	if err := s.repo.UpdateExperimentRawValue(ctx, uint(experiment.ID)); err != nil {
+		// Log error but don't fail the creation since experiment was already created successfully
+		log.Ctx(ctx).Error().Err(err).Int("experimentId", experiment.ID).Msg("Failed to update experiment raw_value")
+	}
+
 	return "Experiment created successfully", nil
 }
 
@@ -219,6 +226,11 @@ func (s *service) GetExperimentByID(ctx context.Context, id uint) (*model.Experi
 			if err != nil {
 				return nil, nil, nil, nil, fmt.Errorf("failed to update experiment: %w", err)
 			}
+			// Update raw_value field with all related data
+			if err := s.repo.UpdateExperimentRawValue(ctx, uint(experiment.ID)); err != nil {
+				// Log error but don't fail the get operation
+				log.Ctx(ctx).Error().Err(err).Int("experimentId", experiment.ID).Msg("Failed to update experiment raw_value")
+			}
 		}
 	} else if experiment.Status == constant.ExperimentStatusRunning {
 		if experiment.EndDate < time.Now().Unix() {
@@ -227,6 +239,11 @@ func (s *service) GetExperimentByID(ctx context.Context, id uint) (*model.Experi
 			err = s.repo.UpdateExperiment(ctx, experiment)
 			if err != nil {
 				return nil, nil, nil, nil, fmt.Errorf("failed to update experiment: %w", err)
+			}
+			// Update raw_value field with all related data
+			if err := s.repo.UpdateExperimentRawValue(ctx, uint(experiment.ID)); err != nil {
+				// Log error but don't fail the get operation
+				log.Ctx(ctx).Error().Err(err).Int("experimentId", experiment.ID).Msg("Failed to update experiment raw_value")
 			}
 		}
 	}
@@ -257,6 +274,12 @@ func (s *service) RejectExperiment(ctx context.Context, id uint, req *dto.Reject
 		return nil, fmt.Errorf("failed to update experiment: %w", err)
 	}
 
+	// Update raw_value field with all related data
+	if err := s.repo.UpdateExperimentRawValue(ctx, uint(experiment.ID)); err != nil {
+		// Log error but don't fail the update
+		log.Ctx(ctx).Error().Err(err).Int("experimentId", experiment.ID).Msg("Failed to update experiment raw_value")
+	}
+
 	s.riverClient.Insert(ctx, dto.SyncExperimentArgs{}, nil)
 
 	return experiment, nil
@@ -282,6 +305,12 @@ func (s *service) ApproveExperiment(ctx context.Context, id uint, req *dto.Appro
 	err = s.repo.UpdateExperiment(ctx, experiment)
 	if err != nil {
 		return nil, fmt.Errorf("failed to update experiment: %w", err)
+	}
+
+	// Update raw_value field with all related data
+	if err := s.repo.UpdateExperimentRawValue(ctx, uint(experiment.ID)); err != nil {
+		// Log error but don't fail the update
+		log.Ctx(ctx).Error().Err(err).Int("experimentId", experiment.ID).Msg("Failed to update experiment raw_value")
 	}
 
 	s.riverClient.Insert(ctx, dto.SyncExperimentArgs{}, nil)
@@ -326,6 +355,12 @@ func (s *service) AbortExperiment(ctx context.Context, id uint, req *dto.AbortEx
 	err = s.repo.UpdateExperiment(ctx, experiment)
 	if err != nil {
 		return nil, fmt.Errorf("failed to update experiment: %w", err)
+	}
+
+	// Update raw_value field with all related data
+	if err := s.repo.UpdateExperimentRawValue(ctx, uint(experiment.ID)); err != nil {
+		// Log error but don't fail the update
+		log.Ctx(ctx).Error().Err(err).Int("experimentId", experiment.ID).Msg("Failed to update experiment raw_value")
 	}
 
 	s.riverClient.Insert(ctx, dto.SyncExperimentArgs{}, nil)

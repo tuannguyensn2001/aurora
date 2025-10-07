@@ -151,3 +151,31 @@ func (r *repository) GetExperimentsActive(ctx context.Context) ([]model.Experime
 	}
 	return result, nil
 }
+
+// UpdateExperimentRawValue updates the raw_value field for an experiment after loading all related data
+func (r *repository) UpdateExperimentRawValue(ctx context.Context, id uint) error {
+	// Get the experiment with all related data loaded
+	var experiment model.Experiment
+	err := r.db.WithContext(ctx).
+		Preload("Segment").
+		Preload("Segment.Rules").
+		Preload("Segment.Rules.Conditions").
+		Preload("Segment.Rules.Conditions.Attribute").
+		Preload("HashAttribute").
+		Preload("Variants").
+		Preload("Variants.Parameters").
+		First(&experiment, id).Error
+	if err != nil {
+		return err
+	}
+
+	// Populate raw value with all related data
+	if err := experiment.PopulateRawValue(); err != nil {
+		return err
+	}
+
+	// Update only the raw_value field
+	return r.db.WithContext(ctx).Model(&experiment).Select("raw_value").Updates(map[string]interface{}{
+		"raw_value": experiment.RawValue,
+	}).Error
+}
