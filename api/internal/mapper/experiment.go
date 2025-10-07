@@ -35,18 +35,19 @@ func ExperimentToSDK(experiment *model.Experiment) (sdk.Experiment, error) {
 	}
 
 	return sdk.Experiment{
-		ID:              experiment.ID,
-		Name:            experiment.Name,
-		Uuid:            experiment.Uuid,
-		StartDate:       experiment.StartDate,
-		EndDate:         experiment.EndDate,
-		HashAttributeID: experiment.HashAttributeID,
-		PopulationSize:  experiment.PopulationSize,
-		Strategy:        experiment.Strategy,
-		Status:          experiment.Status,
-		SegmentID:       experiment.SegmentID,
-		Segment:         segment,
-		Variants:        sdkVariants,
+		ID:                experiment.ID,
+		Name:              experiment.Name,
+		Uuid:              experiment.Uuid,
+		StartDate:         experiment.StartDate,
+		EndDate:           experiment.EndDate,
+		HashAttributeID:   experiment.HashAttributeID,
+		PopulationSize:    experiment.PopulationSize,
+		Strategy:          experiment.Strategy,
+		Status:            experiment.Status,
+		SegmentID:         experiment.SegmentID,
+		Segment:           segment,
+		Variants:          sdkVariants,
+		HashAttributeName: experiment.HashAttribute.Name,
 	}, nil
 }
 
@@ -113,7 +114,7 @@ func ExperimentVariantParameterToSDK(parameter *model.ExperimentVariantParameter
 
 	return sdk.ExperimentVariantParameter{
 		ID:                parameter.ID,
-		ParameterDataType: parameter.ParameterDataType,
+		ParameterDataType: sdk.ParameterDataType(parameter.ParameterDataType),
 		ParameterID:       parameter.ParameterID,
 		ParameterName:     parameter.ParameterName,
 		RolloutValue:      parameter.RolloutValue,

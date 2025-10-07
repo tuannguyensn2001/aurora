@@ -1,10 +1,13 @@
 package sdk
 
 import (
+	"fmt"
 	"log/slog"
 	"slices"
 	"strconv"
 	"strings"
+
+	"github.com/spaolacci/murmur3"
 )
 
 // Condition represents a common interface for all condition types
@@ -15,6 +18,8 @@ type Condition interface {
 	GetValue() string
 	GetEnumOptions() []string
 }
+
+const bucketSize = 10000
 
 type engine struct {
 	logger *slog.Logger
@@ -133,6 +138,74 @@ func (e *engine) evaluateEnumCondition(condition Condition, attribute *Attribute
 	return value == condition.GetValue()
 }
 
+func (e *engine) evaluateExperiment(experiment *Experiment, attribute *Attribute, parameterName string) (string, ParameterDataType, bool) {
+	if err := experiment.isValid(); err != nil {
+		e.logger.Debug("experiment is invalid", "experiment", experiment, "error", err)
+		return "", "", false
+	}
+
+	if experiment.Segment != nil {
+		rules := experiment.Segment.Rules
+		passRule := 0
+		for _, rule := range rules {
+			if e.evaluateSegmentRuleConditions(&rule, attribute) {
+				passRule++
+				break
+			}
+		}
+		if passRule == 0 {
+			e.logger.Debug("no rules passed", "experiment", experiment)
+			return "", "", false
+		}
+
+	}
+
+	valuePopulation := fmt.Sprintf("%v", attribute.Get(experiment.HashAttributeName))
+	keyPopulation := fmt.Sprintf("experiment:population:%s:%s", experiment.Uuid, valuePopulation)
+	inPopulation := e.inPopulation(keyPopulation, 0, experiment.PopulationSize)
+	if !inPopulation {
+		e.logger.Debug("not in population", "experiment", experiment)
+		return "", "", false
+	}
+
+	trafficAllocation := make([]int, 0)
+	for _, variant := range experiment.Variants {
+		if len(trafficAllocation) == 0 {
+			trafficAllocation = append(trafficAllocation, variant.TrafficAllocation)
+		} else {
+			trafficAllocation = append(trafficAllocation, trafficAllocation[len(trafficAllocation)-1]+variant.TrafficAllocation)
+		}
+	}
+	index := -1
+	valueHash := fmt.Sprintf("experiment:hash:%s:%s", experiment.Uuid, valuePopulation)
+	for i, allocation := range trafficAllocation {
+		check := false
+		if i == 0 {
+			check = e.inPopulation(valueHash, 0, allocation)
+		} else if i == len(trafficAllocation)-1 {
+			check = e.inPopulation(valueHash, trafficAllocation[i-1], 100)
+		} else {
+			check = e.inPopulation(valueHash, trafficAllocation[i-1], allocation)
+		}
+		if check {
+			index = i
+			break
+		}
+	}
+	if index == -1 {
+		e.logger.Debug("not in traffic allocation", "experiment", experiment)
+		return "", "", false
+	}
+	variant := experiment.Variants[index]
+	for _, parameter := range variant.Parameters {
+		if parameter.ParameterName == parameterName {
+			return parameter.RolloutValue, parameter.ParameterDataType, true
+		}
+	}
+
+	return "", "", false
+}
+
 func (e *engine) evaluateParameter(parameter *Parameter, attribute *Attribute) string {
 
 	if len(parameter.Rules) == 0 {
@@ -208,4 +281,19 @@ func (e *engine) evaluateSegmentRuleConditions(segmentRule *SegmentRule, attribu
 	}
 
 	return matchedConditions == len(segmentRule.Conditions)
+}
+
+func (e *engine) inPopulation(key string, start int, end int) bool {
+	if start > end {
+		return false
+	}
+	if start < 0 || end > 100 {
+		return false
+	}
+
+	hashValue := murmur3.Sum64([]byte(key))
+	bucket := hashValue % bucketSize
+	thresholdLeft := uint64(start * (bucketSize / 100))
+	thresholdRight := uint64(end * (bucketSize / 100))
+	return bucket < thresholdRight && bucket >= thresholdLeft
 }

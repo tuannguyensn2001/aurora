@@ -83,11 +83,11 @@ type AuroraClient struct {
 	s3Client     *s3.Client
 	inMemoryOnly bool
 	path         string
-	db           *badger.DB
 	engine       *engine
 	endpointUrl  string
 	enableS3     bool
 	onEvaluate   func(source string, parameterName string, attribute *Attribute, rolloutValueRaw *string, err error)
+	storage      storage
 }
 
 // ClientOptions holds the required configuration options for the client
@@ -203,7 +203,7 @@ func NewClient(clientOptions ClientOptions, options ...Option) (*AuroraClient, e
 	if err != nil {
 		return nil, NewConfigurationError("failed to open storage", err)
 	}
-	c.db = db
+	c.storage = newStorage(db, c.logger)
 	c.engine = newEngine(c.logger)
 	return c, nil
 }
@@ -226,7 +226,7 @@ func (c *AuroraClient) Start(ctx context.Context) error {
 
 // Stop shuts down the client gracefully
 func (c *AuroraClient) Stop() {
-	c.db.Close()
+	c.storage.close(context.Background())
 	close(c.quit)
 }
 
@@ -256,11 +256,20 @@ func (c *AuroraClient) dispatch(ctx context.Context) {
 
 func (c *AuroraClient) persist(ctx context.Context) error {
 
+	experiments, err := c.getExperiments(ctx)
+	if err != nil {
+		return err
+	}
+	err = c.storage.persistExperiments(ctx, experiments)
+	if err != nil {
+		return err
+	}
+
 	parameters, err := c.getParameters(ctx)
 	if err != nil {
 		return err
 	}
-	err = c.persistParameters(ctx, parameters)
+	err = c.storage.persistParameters(ctx, parameters)
 	if err != nil {
 		return err
 	}
@@ -296,6 +305,10 @@ type UpstreamParametersResponse struct {
 	Parameters []Parameter `json:"parameters"`
 }
 
+type UpstreamExperimentsResponse struct {
+	Experiments []Experiment `json:"experiments"`
+}
+
 func (c *AuroraClient) getParametersFromUpstream(ctx context.Context) ([]Parameter, error) {
 	client := resty.New()
 	defer client.Close()
@@ -317,25 +330,43 @@ func (c *AuroraClient) getParametersFromUpstream(ctx context.Context) ([]Paramet
 
 }
 
-func (c *AuroraClient) persistParameters(ctx context.Context, parameters []Parameter) error {
+func (c *AuroraClient) getExperimentsFromUpstream(ctx context.Context) ([]Experiment, error) {
+	client := resty.New()
+	defer client.Close()
+	var res UpstreamExperimentsResponse
+	response, err := client.R().
+		SetContext(ctx).
+		SetResult(&res).
+		SetBody(map[string]interface{}{}).
+		Post(fmt.Sprintf("%s/api/v1/sdk/experiments", c.endpointUrl))
+	c.logger.Debug("experiments from upstream", "response", response)
 
-	for _, parameter := range parameters {
-		jsonParameters, err := json.Marshal(parameter)
-		if err != nil {
-			return NewStorageError("marshal parameter", err)
-		}
-		err = c.db.Update(func(txn *badger.Txn) error {
-			return txn.Set([]byte(parameter.Name), jsonParameters)
-		})
-		if err != nil {
-			return NewStorageError("store parameter", err)
-		}
+	if err != nil {
+		c.logger.ErrorContext(ctx, "failed to get experiments from upstream", "error", err)
+		return nil, NewNetworkError("get experiments from upstream", err)
 	}
-	return nil
+
+	castResp := response.Result().(*UpstreamExperimentsResponse)
+	return castResp.Experiments, nil
+}
+
+func (c *AuroraClient) getExperiments(ctx context.Context) ([]Experiment, error) {
+	if !c.enableS3 {
+		return c.getExperimentsFromUpstream(ctx)
+	}
+	return []Experiment{}, nil
 }
 
 // EvaluateParameter evaluates a parameter against the given attributes
 func (c *AuroraClient) EvaluateParameter(ctx context.Context, parameterName string, attribute *Attribute) RolloutValue {
+
+	resExperiments := c.resolveFromExperiments(ctx, parameterName, attribute)
+	if !resExperiments.HasError() {
+		if c.onEvaluate != nil {
+			c.onEvaluate("experiment", parameterName, attribute, resExperiments.raw(), resExperiments.Error())
+		}
+		return resExperiments
+	}
 
 	res := c.resolveFromParameter(ctx, parameterName, attribute)
 
@@ -346,19 +377,29 @@ func (c *AuroraClient) EvaluateParameter(ctx context.Context, parameterName stri
 	return res
 }
 
+func (c *AuroraClient) resolveFromExperiments(ctx context.Context, parameterName string, attribute *Attribute) RolloutValue {
+	experiments, err := c.storage.getExperimentsByParameterName(ctx, parameterName)
+	if err != nil {
+		c.logger.ErrorContext(ctx, "failed to get experiments by parameter name", "error", err)
+		return NewRolloutValueWithError(NewParameterNotFoundError(parameterName))
+	}
+	if len(experiments) == 0 {
+		return NewRolloutValueWithError(NewParameterNotFoundError(parameterName))
+	}
+
+	for _, experiment := range experiments {
+		val, dataType, ok := c.engine.evaluateExperiment(&experiment, attribute, parameterName)
+		if ok {
+			return NewRolloutValue(&val, dataType)
+		}
+	}
+	return NewRolloutValueWithError(NewParameterNotFoundError(parameterName))
+}
+
 func (c *AuroraClient) resolveFromParameter(ctx context.Context, parameterName string, attribute *Attribute) RolloutValue {
 
 	c.logger.InfoContext(ctx, "resolving parameter", "parameterName", parameterName)
-	var parameter Parameter
-	err := c.db.View(func(txn *badger.Txn) error {
-		item, err := txn.Get([]byte(parameterName))
-		if err != nil {
-			return err
-		}
-		return item.Value(func(val []byte) error {
-			return json.Unmarshal(val, &parameter)
-		})
-	})
+	parameter, err := c.storage.getParameterByName(ctx, parameterName)
 	if err != nil {
 		c.logger.ErrorContext(ctx, "failed to get parameter", "error", err)
 		return NewRolloutValueWithError(NewParameterNotFoundError(parameterName))

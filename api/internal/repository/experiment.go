@@ -142,6 +142,7 @@ func (r *repository) GetExperimentsActive(ctx context.Context) ([]model.Experime
 	result := make([]model.Experiment, 0)
 	err := r.db.WithContext(ctx).
 		Where("status in (?)", []string{constant.ExperimentStatusSchedule, constant.ExperimentStatusRunning}).
+		Preload("HashAttribute").
 		Preload("Variants").
 		Preload("Variants.Parameters").
 		Find(&result).Error

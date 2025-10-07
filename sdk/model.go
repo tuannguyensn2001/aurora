@@ -1,6 +1,9 @@
 package sdk
 
-import "time"
+import (
+	"errors"
+	"time"
+)
 
 // ParameterDataType represents the data type of a parameter
 type ParameterDataType string
@@ -111,18 +114,19 @@ type Segment struct {
 }
 
 type Experiment struct {
-	ID              int                 `json:"id"`
-	Name            string              `json:"name"`
-	Uuid            string              `json:"uuid"`
-	StartDate       int64               `json:"startDate"`
-	EndDate         int64               `json:"endDate"`
-	HashAttributeID int                 `json:"hashAttributeId"`
-	PopulationSize  int                 `json:"populationSize"`
-	Strategy        string              `json:"strategy"`
-	Status          string              `json:"status"`
-	SegmentID       int                 `json:"segmentId"`
-	Segment         *Segment            `json:"segment,omitempty"`
-	Variants        []ExperimentVariant `json:"variants"`
+	ID                int                 `json:"id"`
+	Name              string              `json:"name"`
+	Uuid              string              `json:"uuid"`
+	StartDate         int64               `json:"startDate"`
+	EndDate           int64               `json:"endDate"`
+	HashAttributeID   int                 `json:"hashAttributeId"`
+	PopulationSize    int                 `json:"populationSize"`
+	Strategy          string              `json:"strategy"`
+	Status            string              `json:"status"`
+	SegmentID         int                 `json:"segmentId"`
+	Segment           *Segment            `json:"segment,omitempty"`
+	Variants          []ExperimentVariant `json:"variants"`
+	HashAttributeName string              `json:"hashAttributeName"`
 }
 
 type ExperimentVariant struct {
@@ -135,9 +139,67 @@ type ExperimentVariant struct {
 }
 
 type ExperimentVariantParameter struct {
-	ID                int    `json:"id"`
-	ParameterDataType string `json:"parameterDataType"`
-	ParameterID       int    `json:"parameterId"`
-	ParameterName     string `json:"parameterName"`
-	RolloutValue      string `json:"rolloutValue"`
+	ID                int               `json:"id"`
+	ParameterDataType ParameterDataType `json:"parameterDataType"`
+	ParameterID       int               `json:"parameterId"`
+	ParameterName     string            `json:"parameterName"`
+	RolloutValue      string            `json:"rolloutValue"`
+}
+
+func (e *Experiment) isValid() error {
+	if e.HashAttributeName == "" {
+		return errors.New("hash attribute name is empty")
+	}
+	now := time.Now().Unix()
+	if now < e.StartDate || now > e.EndDate {
+		return errors.New("experiment is not active")
+	}
+	if e.StartDate >= e.EndDate {
+		return errors.New("start date must be before end date")
+	}
+	if len(e.Uuid) == 0 {
+		return errors.New("uuid is empty")
+	}
+	if e.PopulationSize <= 0 || e.PopulationSize > 100 {
+		return errors.New("population size is invalid")
+	}
+	if e.Strategy != "percentage_split" {
+		return errors.New("strategy is invalid")
+	}
+	if (e.Status != ExperimentStatusSchedule) && (e.Status != ExperimentStatusRunning) {
+		return errors.New("status is invalid")
+	}
+
+	if len(e.Variants) == 0 {
+		return errors.New("variants are empty")
+	}
+
+	totalTrafficAllocation := 0
+	for _, variant := range e.Variants {
+		totalTrafficAllocation += variant.TrafficAllocation
+	}
+	if totalTrafficAllocation != 100 {
+		return errors.New("total traffic allocation must be 100")
+	}
+
+	for _, variant := range e.Variants {
+		if variant.TrafficAllocation <= 0 || variant.TrafficAllocation > 100 {
+			return errors.New("traffic allocation is invalid")
+		}
+		if len(variant.Parameters) == 0 {
+			return errors.New("parameters are empty")
+		}
+
+		for _, parameter := range variant.Parameters {
+			if len(parameter.ParameterName) == 0 {
+				return errors.New("parameter name is empty")
+			}
+			if parameter.ParameterDataType != ParameterDataTypeString && parameter.ParameterDataType != ParameterDataTypeNumber && parameter.ParameterDataType != ParameterDataTypeBoolean {
+				return errors.New("parameter data type is invalid")
+			}
+		}
+
+	}
+	return nil
+
 }
