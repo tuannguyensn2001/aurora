@@ -23,8 +23,8 @@ func ProvideSDK(lc fx.Lifecycle, params SDKParams) sdk.Client {
 	},
 		sdk.WithPath("sdk-dump"),
 		sdk.WithLogLevel(slog.LevelError),
-		sdk.WithRefreshRate(10*time.Second),
-		sdk.WithEnableS3(false),
+		sdk.WithRefreshRate(1*time.Minute),
+		sdk.WithEnableS3(true),
 		sdk.WithOnEvaluate(func(source string, parameterName string, attribute *sdk.Attribute, rolloutValueRaw *string, err error) {
 			// slog.Info("SDK evaluated parameter", "source", source, "parameterName", parameterName, "attribute", attribute, "rolloutValueRaw", *rolloutValueRaw, "error", err)
 			slog.Info("SDK evaluated parameter", "source", source, "parameterName", parameterName, "attribute", attribute, "rolloutValueRaw", rolloutValueRaw, "error", err)

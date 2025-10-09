@@ -3,6 +3,8 @@ package repository
 import (
 	"api/internal/model"
 	"context"
+
+	"github.com/rs/zerolog/log"
 )
 
 // CreateParameter creates a new parameter with its rules and conditions
@@ -205,6 +207,8 @@ func (r *repository) GetAllParametersForSDK(ctx context.Context) ([]*model.Param
 
 // UpdateParameterRawValue updates the raw_value field for a parameter after loading all related data
 func (r *repository) UpdateParameterRawValue(ctx context.Context, id uint) error {
+	logger := log.Ctx(ctx).With().Str("repository", "update-parameter-raw-value").Uint("id", id).Logger()
+	logger.Info().Msg("Updating parameter raw value")
 	// Get the parameter with all related data loaded
 	var parameter model.Parameter
 	err := r.db.WithContext(ctx).

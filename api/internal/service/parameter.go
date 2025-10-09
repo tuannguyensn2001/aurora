@@ -159,6 +159,7 @@ func (s *service) UpdateParameter(ctx context.Context, id uint, req *dto.UpdateP
 	}
 
 	// Update raw_value field with all related data
+	logger.Info().Msg("Updating parameter raw value")
 	if err := s.repo.UpdateParameterRawValue(ctx, parameter.ID); err != nil {
 		// Log error but don't fail the update
 		logger.Error().Err(err).Uint("parameterId", parameter.ID).Msg("Failed to update parameter raw_value")
@@ -305,6 +306,10 @@ func (s *service) UpdateParameterWithRules(ctx context.Context, id uint, req *dt
 					}
 				}
 			}
+		}
+
+		if err := txRepo.UpdateParameterRawValue(ctx, id); err != nil {
+			return nil, fmt.Errorf("failed to update parameter raw value: %v", err)
 		}
 
 		// Return updated parameter with all rules

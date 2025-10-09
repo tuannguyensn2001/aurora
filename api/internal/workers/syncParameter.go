@@ -43,20 +43,21 @@ func (w *SyncParameterWorker) ProcessSyncParameter(ctx context.Context) error {
 		return nil
 	}
 
-	parameters, err := w.Repository.GetAllParameters(ctx, 0, 0)
+	parameters, err := w.Repository.GetAllParametersForSDK(ctx)
 	if err != nil {
 		logger.Error().Err(err).Msg("Failed to get parameter by ID")
 		return err
 	}
 
 	// Convert to SDK format using mapper
-	sdkParameters, err := mapper.ParametersToSDK(parameters)
+	sdkParameters, err := mapper.ParametersToSDKFromRawValue(parameters)
 	if err != nil {
 		logger.Error().Err(err).Msg("Failed to map parameters to SDK")
 		return err
 	}
 
 	logger.Info().Int("parameters_count", len(sdkParameters)).Msg("Found parameters to sync")
+	logger.Debug().Interface("parameters", sdkParameters[0]).Msg("Parameters to sync")
 	jsonParameters, err := json.Marshal(sdkParameters)
 	if err != nil {
 		logger.Error().Err(err).Msg("Failed to marshal parameters")
