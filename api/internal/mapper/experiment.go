@@ -2,7 +2,9 @@ package mapper
 
 import (
 	"api/internal/model"
+	"encoding/json"
 	"errors"
+	"fmt"
 	"sdk"
 )
 
@@ -220,4 +222,406 @@ func ExperimentBatchToSDK(experiments []*model.Experiment, experimentsVariants m
 	}
 
 	return sdkExperiments, nil
+}
+
+// ExperimentsToSDKFromRawValue converts experiments with raw values to SDK format
+// This function uses the raw_value field from the database for efficient conversion
+func ExperimentsToSDKFromRawValue(experiments []model.Experiment) ([]sdk.Experiment, error) {
+	if experiments == nil {
+		return []sdk.Experiment{}, nil
+	}
+
+	sdkExperiments := make([]sdk.Experiment, len(experiments))
+	for i, experiment := range experiments {
+		sdkExp, err := ExperimentToSDKFromRawValue(&experiment)
+		if err != nil {
+			return nil, err
+		}
+		sdkExperiments[i] = sdkExp
+	}
+
+	return sdkExperiments, nil
+}
+
+// ExperimentToSDKFromRawValue converts a single experiment with raw value to SDK format
+// This function uses the raw_value field for efficient conversion
+func ExperimentToSDKFromRawValue(experiment *model.Experiment) (sdk.Experiment, error) {
+	if experiment == nil {
+		return sdk.Experiment{}, errors.New("experiment is nil")
+	}
+
+	// If raw_value is available, use it for conversion
+	if len(experiment.RawValue) > 0 {
+		var rawData map[string]interface{}
+		if err := json.Unmarshal(experiment.RawValue, &rawData); err != nil {
+			return sdk.Experiment{}, fmt.Errorf("failed to unmarshal raw value: %w", err)
+		}
+
+		// Convert raw data to SDK format
+		sdkExp, err := convertRawDataToSDK(rawData)
+		if err != nil {
+			return sdk.Experiment{}, err
+		}
+		return sdkExp, nil
+	}
+
+	// Fallback to regular conversion if raw_value is not available
+	return ExperimentToSDK(experiment)
+}
+
+// convertRawDataToSDK converts raw JSON data to SDK experiment format
+func convertRawDataToSDK(rawData map[string]interface{}) (sdk.Experiment, error) {
+	// Extract basic experiment fields
+	id, ok := rawData["id"].(float64)
+	if !ok {
+		return sdk.Experiment{}, errors.New("invalid experiment id")
+	}
+
+	name, ok := rawData["name"].(string)
+	if !ok {
+		return sdk.Experiment{}, errors.New("invalid experiment name")
+	}
+
+	uuid, ok := rawData["uuid"].(string)
+	if !ok {
+		return sdk.Experiment{}, errors.New("invalid experiment uuid")
+	}
+
+	startDate, ok := rawData["startDate"].(float64)
+	if !ok {
+		return sdk.Experiment{}, errors.New("invalid experiment startDate")
+	}
+
+	endDate, ok := rawData["endDate"].(float64)
+	if !ok {
+		return sdk.Experiment{}, errors.New("invalid experiment endDate")
+	}
+
+	hashAttributeID, ok := rawData["hashAttributeId"].(float64)
+	if !ok {
+		return sdk.Experiment{}, errors.New("invalid experiment hashAttributeId")
+	}
+
+	populationSize, ok := rawData["populationSize"].(float64)
+	if !ok {
+		return sdk.Experiment{}, errors.New("invalid experiment populationSize")
+	}
+
+	strategy, ok := rawData["strategy"].(string)
+	if !ok {
+		return sdk.Experiment{}, errors.New("invalid experiment strategy")
+	}
+
+	status, ok := rawData["status"].(string)
+	if !ok {
+		return sdk.Experiment{}, errors.New("invalid experiment status")
+	}
+
+	segmentID, ok := rawData["segmentId"].(float64)
+	if !ok {
+		return sdk.Experiment{}, errors.New("invalid experiment segmentId")
+	}
+
+	// Extract hash attribute name
+	hashAttributeName := ""
+	if hashAttribute, ok := rawData["hashAttribute"].(map[string]interface{}); ok {
+		if name, ok := hashAttribute["name"].(string); ok {
+			hashAttributeName = name
+		}
+	}
+
+	// Extract segment
+	var segment *sdk.Segment
+	if segmentData, ok := rawData["segment"].(map[string]interface{}); ok {
+		sdkSegment, err := convertRawSegmentToSDK(segmentData)
+		if err != nil {
+			return sdk.Experiment{}, err
+		}
+		segment = &sdkSegment
+	}
+
+	// Extract variants
+	var variants []sdk.ExperimentVariant
+	if variantsData, ok := rawData["variants"].([]interface{}); ok {
+		variants = make([]sdk.ExperimentVariant, len(variantsData))
+		for i, variantData := range variantsData {
+			if variantMap, ok := variantData.(map[string]interface{}); ok {
+				sdkVariant, err := convertRawVariantToSDK(variantMap)
+				if err != nil {
+					return sdk.Experiment{}, err
+				}
+				variants[i] = sdkVariant
+			}
+		}
+	}
+
+	return sdk.Experiment{
+		ID:                int(id),
+		Name:              name,
+		Uuid:              uuid,
+		StartDate:         int64(startDate),
+		EndDate:           int64(endDate),
+		HashAttributeID:   int(hashAttributeID),
+		PopulationSize:    int(populationSize),
+		Strategy:          strategy,
+		Status:            status,
+		SegmentID:         int(segmentID),
+		Segment:           segment,
+		Variants:          variants,
+		HashAttributeName: hashAttributeName,
+	}, nil
+}
+
+// ConvertRawSegmentToSDK converts raw segment data to SDK format (public function)
+func ConvertRawSegmentToSDK(segmentData map[string]interface{}) (sdk.Segment, error) {
+	return convertRawSegmentToSDK(segmentData)
+}
+
+// convertRawSegmentToSDK converts raw segment data to SDK format
+func convertRawSegmentToSDK(segmentData map[string]interface{}) (sdk.Segment, error) {
+	id, ok := segmentData["id"].(float64)
+	if !ok {
+		return sdk.Segment{}, errors.New("invalid segment id")
+	}
+
+	name, ok := segmentData["name"].(string)
+	if !ok {
+		return sdk.Segment{}, errors.New("invalid segment name")
+	}
+
+	description, ok := segmentData["description"].(string)
+	if !ok {
+		description = ""
+	}
+
+	// Extract rules
+	var rules []sdk.SegmentRule
+	if rulesData, ok := segmentData["rules"].([]interface{}); ok {
+		rules = make([]sdk.SegmentRule, len(rulesData))
+		for i, ruleData := range rulesData {
+			if ruleMap, ok := ruleData.(map[string]interface{}); ok {
+				sdkRule, err := convertRawSegmentRuleToSDK(ruleMap)
+				if err != nil {
+					return sdk.Segment{}, err
+				}
+				rules[i] = sdkRule
+			}
+		}
+	}
+
+	return sdk.Segment{
+		ID:          uint(id),
+		Name:        name,
+		Description: description,
+		Rules:       rules,
+	}, nil
+}
+
+// convertRawSegmentRuleToSDK converts raw segment rule data to SDK format
+func convertRawSegmentRuleToSDK(ruleData map[string]interface{}) (sdk.SegmentRule, error) {
+	id, ok := ruleData["id"].(float64)
+	if !ok {
+		return sdk.SegmentRule{}, errors.New("invalid segment rule id")
+	}
+
+	name, ok := ruleData["name"].(string)
+	if !ok {
+		return sdk.SegmentRule{}, errors.New("invalid segment rule name")
+	}
+
+	description, ok := ruleData["description"].(string)
+	if !ok {
+		description = ""
+	}
+
+	segmentID, ok := ruleData["segmentId"].(float64)
+	if !ok {
+		return sdk.SegmentRule{}, errors.New("invalid segment rule segmentId")
+	}
+
+	// Extract conditions
+	var conditions []sdk.RuleCondition
+	if conditionsData, ok := ruleData["conditions"].([]interface{}); ok {
+		conditions = make([]sdk.RuleCondition, len(conditionsData))
+		for i, conditionData := range conditionsData {
+			if conditionMap, ok := conditionData.(map[string]interface{}); ok {
+				sdkCondition, err := convertRawConditionToSDK(conditionMap)
+				if err != nil {
+					return sdk.SegmentRule{}, err
+				}
+				conditions[i] = sdkCondition
+			}
+		}
+	}
+
+	return sdk.SegmentRule{
+		ID:          uint(id),
+		Name:        name,
+		Description: description,
+		SegmentID:   uint(segmentID),
+		Conditions:  conditions,
+	}, nil
+}
+
+// convertRawConditionToSDK converts raw condition data to SDK format
+func convertRawConditionToSDK(conditionData map[string]interface{}) (sdk.RuleCondition, error) {
+	id, ok := conditionData["id"].(float64)
+	if !ok {
+		return sdk.RuleCondition{}, errors.New("invalid condition id")
+	}
+
+	attributeID, ok := conditionData["attributeId"].(float64)
+	if !ok {
+		return sdk.RuleCondition{}, errors.New("invalid condition attributeId")
+	}
+
+	operator, ok := conditionData["operator"].(string)
+	if !ok {
+		return sdk.RuleCondition{}, errors.New("invalid condition operator")
+	}
+
+	value, ok := conditionData["value"].(string)
+	if !ok {
+		return sdk.RuleCondition{}, errors.New("invalid condition value")
+	}
+
+	// Extract attribute information from nested attribute object
+	var attributeName, attributeDataType string
+	if attribute, ok := conditionData["attribute"].(map[string]interface{}); ok {
+		if name, ok := attribute["name"].(string); ok {
+			attributeName = name
+		}
+		if dataType, ok := attribute["dataType"].(string); ok {
+			attributeDataType = dataType
+		}
+	} else {
+		// Fallback to direct fields if nested attribute is not available
+		if name, ok := conditionData["attributeName"].(string); ok {
+			attributeName = name
+		}
+		if dataType, ok := conditionData["attributeDataType"].(string); ok {
+			attributeDataType = dataType
+		}
+	}
+
+	// Extract enum options from nested attribute object
+	var enumOptions []string
+	if attribute, ok := conditionData["attribute"].(map[string]interface{}); ok {
+		if enumData, ok := attribute["enumOptions"].([]interface{}); ok {
+			enumOptions = make([]string, len(enumData))
+			for i, option := range enumData {
+				if optionStr, ok := option.(string); ok {
+					enumOptions[i] = optionStr
+				}
+			}
+		}
+	} else {
+		// Fallback to direct field if nested attribute is not available
+		if enumData, ok := conditionData["enumOptions"].([]interface{}); ok {
+			enumOptions = make([]string, len(enumData))
+			for i, option := range enumData {
+				if optionStr, ok := option.(string); ok {
+					enumOptions[i] = optionStr
+				}
+			}
+		}
+	}
+
+	return sdk.RuleCondition{
+		ID:                uint(id),
+		AttributeID:       uint(attributeID),
+		Operator:          sdk.ConditionOperator(operator),
+		Value:             value,
+		AttributeName:     attributeName,
+		AttributeDataType: attributeDataType,
+		EnumOptions:       enumOptions,
+	}, nil
+}
+
+// convertRawVariantToSDK converts raw variant data to SDK format
+func convertRawVariantToSDK(variantData map[string]interface{}) (sdk.ExperimentVariant, error) {
+	id, ok := variantData["id"].(float64)
+	if !ok {
+		return sdk.ExperimentVariant{}, errors.New("invalid variant id")
+	}
+
+	experimentID, ok := variantData["experimentId"].(float64)
+	if !ok {
+		return sdk.ExperimentVariant{}, errors.New("invalid variant experimentId")
+	}
+
+	name, ok := variantData["name"].(string)
+	if !ok {
+		return sdk.ExperimentVariant{}, errors.New("invalid variant name")
+	}
+
+	description, ok := variantData["description"].(string)
+	if !ok {
+		description = ""
+	}
+
+	trafficAllocation, ok := variantData["trafficAllocation"].(float64)
+	if !ok {
+		return sdk.ExperimentVariant{}, errors.New("invalid variant trafficAllocation")
+	}
+
+	// Extract parameters
+	var parameters []sdk.ExperimentVariantParameter
+	if parametersData, ok := variantData["parameters"].([]interface{}); ok {
+		parameters = make([]sdk.ExperimentVariantParameter, len(parametersData))
+		for i, paramData := range parametersData {
+			if paramMap, ok := paramData.(map[string]interface{}); ok {
+				sdkParam, err := convertRawVariantParameterToSDK(paramMap)
+				if err != nil {
+					return sdk.ExperimentVariant{}, err
+				}
+				parameters[i] = sdkParam
+			}
+		}
+	}
+
+	return sdk.ExperimentVariant{
+		ID:                int(id),
+		ExperimentID:      int(experimentID),
+		Name:              name,
+		Description:       description,
+		TrafficAllocation: int(trafficAllocation),
+		Parameters:        parameters,
+	}, nil
+}
+
+// convertRawVariantParameterToSDK converts raw variant parameter data to SDK format
+func convertRawVariantParameterToSDK(paramData map[string]interface{}) (sdk.ExperimentVariantParameter, error) {
+	id, ok := paramData["id"].(float64)
+	if !ok {
+		return sdk.ExperimentVariantParameter{}, errors.New("invalid parameter id")
+	}
+
+	parameterDataType, ok := paramData["parameterDataType"].(string)
+	if !ok {
+		return sdk.ExperimentVariantParameter{}, errors.New("invalid parameter data type")
+	}
+
+	parameterID, ok := paramData["parameterId"].(float64)
+	if !ok {
+		return sdk.ExperimentVariantParameter{}, errors.New("invalid parameter id")
+	}
+
+	parameterName, ok := paramData["parameterName"].(string)
+	if !ok {
+		return sdk.ExperimentVariantParameter{}, errors.New("invalid parameter name")
+	}
+
+	rolloutValue, ok := paramData["rolloutValue"].(string)
+	if !ok {
+		return sdk.ExperimentVariantParameter{}, errors.New("invalid parameter rollout value")
+	}
+
+	return sdk.ExperimentVariantParameter{
+		ID:                int(id),
+		ParameterDataType: sdk.ParameterDataType(parameterDataType),
+		ParameterID:       int(parameterID),
+		ParameterName:     parameterName,
+		RolloutValue:      rolloutValue,
+	}, nil
 }

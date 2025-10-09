@@ -354,7 +354,20 @@ func (c *AuroraClient) getExperiments(ctx context.Context) ([]Experiment, error)
 	if !c.enableS3 {
 		return c.getExperimentsFromUpstream(ctx)
 	}
-	return []Experiment{}, nil
+	getObjectInput := &s3.GetObjectInput{
+		Bucket: aws.String(c.s3BucketName),
+		Key:    aws.String("experiments.json"),
+	}
+	getObjectOutput, err := c.s3Client.GetObject(ctx, getObjectInput)
+	if err != nil {
+		return nil, NewNetworkError("get experiments from s3", err)
+	}
+	experiments := []Experiment{}
+	err = json.NewDecoder(getObjectOutput.Body).Decode(&experiments)
+	if err != nil {
+		return nil, NewNetworkError("decode experiments from s3", err)
+	}
+	return experiments, nil
 }
 
 // EvaluateParameter evaluates a parameter against the given attributes

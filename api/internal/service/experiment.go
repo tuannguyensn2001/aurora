@@ -374,12 +374,10 @@ func (s *service) GetActiveExperimentsSDK(ctx context.Context) ([]sdk.Experiment
 		return nil, fmt.Errorf("failed to get active experiments: %w", err)
 	}
 
-	result := make([]sdk.Experiment, len(experiments))
-	for i, experiment := range experiments {
-		result[i], err = mapper.ExperimentToSDK(&experiment)
-		if err != nil {
-			return nil, fmt.Errorf("failed to convert experiment to sdk: %w", err)
-		}
+	// Use raw value conversion for better performance
+	result, err := mapper.ExperimentsToSDKFromRawValue(experiments)
+	if err != nil {
+		return nil, fmt.Errorf("failed to convert experiments to sdk: %w", err)
 	}
 	return result, nil
 }

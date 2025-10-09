@@ -47,13 +47,13 @@ func ProvideSDK(lc fx.Lifecycle, params SDKParams) sdk.Client {
 				return err
 			}
 
-			result := client.EvaluateParameter(context.TODO(), "enableViewAgent", sdk.NewAttribute().SetBool("is_active", true).SetNumber("age", 14))
-			if result.HasError() {
-				slog.Error("Failed to evaluate parameter", "error", result.Error())
-			} else {
-				str := result.AsBool(false)
-				slog.Info("parameter evaluation result", "value", str)
-			}
+			//result := client.EvaluateParameter(context.TODO(), "enableViewAgent", sdk.NewAttribute().SetBool("is_active", true).SetNumber("age", 14))
+			//if result.HasError() {
+			//	slog.Error("Failed to evaluate parameter", "error", result.Error())
+			//} else {
+			//	str := result.AsBool(false)
+			//	slog.Info("parameter evaluation result", "value", str)
+			//}
 
 			return nil
 		},
