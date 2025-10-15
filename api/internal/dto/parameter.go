@@ -234,3 +234,97 @@ type SimulateAttributeRequest struct {
 type SimulateParameterResponse struct {
 	Value interface{} `json:"value"`
 }
+
+// ========== Parameter Change Request DTOs ==========
+
+// CreateParameterChangeRequestRequest represents the request to create a parameter change request
+type CreateParameterChangeRequestRequest struct {
+	ParameterID uint   `json:"parameterId" validate:"required"`
+	Description string `json:"description"`
+	// The proposed changes - same structure as UpdateParameterWithRulesRequest
+	Name                 *string                      `json:"name,omitempty"`
+	DataType             *model.ParameterDataType     `json:"dataType,omitempty"`
+	ParameterDescription *string                      `json:"parameterDescription,omitempty"`
+	DefaultRolloutValue  interface{}                  `json:"defaultRolloutValue,omitempty"`
+	Rules                []CreateParameterRuleRequest `json:"rules,omitempty" validate:"dive"`
+}
+
+// ParameterChangeRequestResponse represents the response for a parameter change request
+type ParameterChangeRequestResponse struct {
+	ID                uint                               `json:"id"`
+	ParameterID       uint                               `json:"parameterId"`
+	ParameterName     string                             `json:"parameterName"`
+	RequestedByUserID uint                               `json:"requestedByUserId"`
+	RequestedByUser   *UserInfo                          `json:"requestedByUser,omitempty"`
+	Status            model.ParameterChangeRequestStatus `json:"status"`
+	Description       string                             `json:"description"`
+	ChangeData        model.ParameterChangeData          `json:"changeData"`
+	ReviewedByUserID  *uint                              `json:"reviewedByUserId,omitempty"`
+	ReviewedByUser    *UserInfo                          `json:"reviewedByUser,omitempty"`
+	ReviewedAt        *time.Time                         `json:"reviewedAt,omitempty"`
+	CreatedAt         time.Time                          `json:"createdAt"`
+	UpdatedAt         time.Time                          `json:"updatedAt"`
+}
+
+// ApproveParameterChangeRequestRequest represents the request to approve a change request
+type ApproveParameterChangeRequestRequest struct {
+	Comment string `json:"comment"`
+}
+
+// RejectParameterChangeRequestRequest represents the request to reject a change request
+type RejectParameterChangeRequestRequest struct {
+	Comment string `json:"comment"`
+}
+
+// ToParameterChangeRequestResponse converts model.ParameterChangeRequest to ParameterChangeRequestResponse
+func ToParameterChangeRequestResponse(changeRequest *model.ParameterChangeRequest) ParameterChangeRequestResponse {
+	response := ParameterChangeRequestResponse{
+		ID:                changeRequest.ID,
+		ParameterID:       changeRequest.ParameterID,
+		RequestedByUserID: changeRequest.RequestedByUserID,
+		Status:            changeRequest.Status,
+		Description:       changeRequest.Description,
+		ChangeData:        changeRequest.ChangeData,
+		ReviewedByUserID:  changeRequest.ReviewedByUserID,
+		ReviewedAt:        changeRequest.ReviewedAt,
+		CreatedAt:         changeRequest.CreatedAt,
+		UpdatedAt:         changeRequest.UpdatedAt,
+	}
+
+	// Add parameter name if parameter is loaded
+	if changeRequest.Parameter != nil {
+		response.ParameterName = changeRequest.Parameter.Name
+	}
+
+	// Add requested by user info
+	if changeRequest.RequestedByUser != nil {
+		lastLogin := changeRequest.RequestedByUser.CreatedAt
+		if changeRequest.RequestedByUser.LastLoginAt != nil {
+			lastLogin = *changeRequest.RequestedByUser.LastLoginAt
+		}
+		response.RequestedByUser = &UserInfo{
+			ID:          changeRequest.RequestedByUser.ID,
+			Email:       changeRequest.RequestedByUser.Email,
+			Name:        changeRequest.RequestedByUser.Name,
+			Picture:     changeRequest.RequestedByUser.Picture,
+			LastLoginAt: lastLogin,
+		}
+	}
+
+	// Add reviewed by user info
+	if changeRequest.ReviewedByUser != nil {
+		lastLogin := changeRequest.ReviewedByUser.CreatedAt
+		if changeRequest.ReviewedByUser.LastLoginAt != nil {
+			lastLogin = *changeRequest.ReviewedByUser.LastLoginAt
+		}
+		response.ReviewedByUser = &UserInfo{
+			ID:          changeRequest.ReviewedByUser.ID,
+			Email:       changeRequest.ReviewedByUser.Email,
+			Name:        changeRequest.ReviewedByUser.Name,
+			Picture:     changeRequest.ReviewedByUser.Picture,
+			LastLoginAt: lastLogin,
+		}
+	}
+
+	return response
+}

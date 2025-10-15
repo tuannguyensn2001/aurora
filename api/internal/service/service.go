@@ -48,6 +48,14 @@ type Service interface {
 	IncrementParameterUsageCount(ctx context.Context, id uint) error
 	DecrementParameterUsageCount(ctx context.Context, id uint) error
 
+	// Parameter Change Request operations
+	CreateParameterChangeRequest(ctx context.Context, userID uint, req *dto.CreateParameterChangeRequestRequest) (*model.ParameterChangeRequest, error)
+	GetParameterChangeRequestByID(ctx context.Context, id uint) (*model.ParameterChangeRequest, error)
+	GetPendingParameterChangeRequestByParameterID(ctx context.Context, parameterID uint) (*model.ParameterChangeRequest, error)
+	GetParameterChangeRequestsByParameterID(ctx context.Context, parameterID uint) ([]*model.ParameterChangeRequest, error)
+	ApproveParameterChangeRequest(ctx context.Context, id uint, userID uint, req *dto.ApproveParameterChangeRequestRequest) (*model.ParameterChangeRequest, error)
+	RejectParameterChangeRequest(ctx context.Context, id uint, userID uint, req *dto.RejectParameterChangeRequestRequest) (*model.ParameterChangeRequest, error)
+
 	// Experiment operations
 	CreateExperiment(ctx context.Context, req *dto.CreateExperimentRequest) (string, error)
 	GetAllExperiments(ctx context.Context) ([]*model.Experiment, error)

@@ -104,6 +104,18 @@ func (r *Router) SetupRoutes(engine *gin.Engine) {
 				parameters.PUT("/:id", r.updateParameterWithRules)
 				parameters.DELETE("/:id", r.deleteParameter)
 				parameters.POST("/simulate", r.simulateParameter)
+
+				// Parameter change request routes
+				parameters.POST("/:id/change-requests", r.createParameterChangeRequest)
+				parameters.GET("/:id/change-requests/pending", r.getPendingParameterChangeRequest)
+			}
+
+			// Parameter Change Request routes
+			changeRequests := protected.Group("/parameter-change-requests")
+			{
+				changeRequests.GET("/:id", r.getParameterChangeRequestByID)
+				changeRequests.PATCH("/:id/approve", r.approveParameterChangeRequest)
+				changeRequests.PATCH("/:id/reject", r.rejectParameterChangeRequest)
 			}
 
 			// Experiment routes
@@ -725,6 +737,150 @@ func (r *Router) getCurrentUser(c *gin.Context) {
 	}
 
 	result, err := r.handler.GetCurrentUser(c.Request.Context(), userID)
+	if err != nil {
+		c.Error(err)
+		return
+	}
+
+	c.JSON(http.StatusOK, result)
+}
+
+// Parameter Change Request handlers
+func (r *Router) createParameterChangeRequest(c *gin.Context) {
+	id, err := parseIDParam(c)
+	if err != nil {
+		c.Error(err)
+		return
+	}
+
+	// Extract user ID from JWT token
+	userID, exists := middleware.GetUserIDFromContext(c)
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+
+	var req dto.CreateParameterChangeRequestRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.Error(err)
+		return
+	}
+
+	// Set parameter ID from URL
+	req.ParameterID = id
+
+	result, err := r.handler.CreateParameterChangeRequest(c.Request.Context(), userID, &req)
+	if err != nil {
+		c.Error(err)
+		return
+	}
+
+	c.JSON(http.StatusCreated, result)
+}
+
+func (r *Router) getParameterChangeRequestByID(c *gin.Context) {
+	id, err := parseIDParam(c)
+	if err != nil {
+		c.Error(err)
+		return
+	}
+
+	result, err := r.handler.GetParameterChangeRequestByID(c.Request.Context(), id)
+	if err != nil {
+		c.Error(err)
+		return
+	}
+
+	c.JSON(http.StatusOK, result)
+}
+
+func (r *Router) getPendingParameterChangeRequest(c *gin.Context) {
+	id, err := parseIDParam(c)
+	if err != nil {
+		c.Error(err)
+		return
+	}
+
+	result, err := r.handler.GetPendingParameterChangeRequestByParameterID(c.Request.Context(), id)
+	if err != nil {
+		c.Error(err)
+		return
+	}
+
+	if result == nil {
+		c.JSON(http.StatusOK, nil)
+		return
+	}
+
+	c.JSON(http.StatusOK, result)
+}
+
+func (r *Router) getParameterChangeRequests(c *gin.Context) {
+	id, err := parseIDParam(c)
+	if err != nil {
+		c.Error(err)
+		return
+	}
+
+	result, err := r.handler.GetParameterChangeRequestsByParameterID(c.Request.Context(), id)
+	if err != nil {
+		c.Error(err)
+		return
+	}
+
+	c.JSON(http.StatusOK, result)
+}
+
+func (r *Router) approveParameterChangeRequest(c *gin.Context) {
+	id, err := parseIDParam(c)
+	if err != nil {
+		c.Error(err)
+		return
+	}
+
+	// Extract user ID from JWT token
+	userID, exists := middleware.GetUserIDFromContext(c)
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+
+	var req dto.ApproveParameterChangeRequestRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.Error(err)
+		return
+	}
+
+	result, err := r.handler.ApproveParameterChangeRequest(c.Request.Context(), id, userID, &req)
+	if err != nil {
+		c.Error(err)
+		return
+	}
+
+	c.JSON(http.StatusOK, result)
+}
+
+func (r *Router) rejectParameterChangeRequest(c *gin.Context) {
+	id, err := parseIDParam(c)
+	if err != nil {
+		c.Error(err)
+		return
+	}
+
+	// Extract user ID from JWT token
+	userID, exists := middleware.GetUserIDFromContext(c)
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+
+	var req dto.RejectParameterChangeRequestRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.Error(err)
+		return
+	}
+
+	result, err := r.handler.RejectParameterChangeRequest(c.Request.Context(), id, userID, &req)
 	if err != nil {
 		c.Error(err)
 		return

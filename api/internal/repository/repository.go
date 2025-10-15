@@ -104,6 +104,13 @@ type Repository interface {
 	UpdateUserLastLogin(ctx context.Context, id uint) error
 	DeleteUser(ctx context.Context, id uint) error
 
+	// Parameter Change Request operations
+	CreateParameterChangeRequest(ctx context.Context, changeRequest *model.ParameterChangeRequest) error
+	GetParameterChangeRequestByID(ctx context.Context, id uint) (*model.ParameterChangeRequest, error)
+	GetPendingParameterChangeRequestByParameterID(ctx context.Context, parameterID uint) (*model.ParameterChangeRequest, error)
+	GetParameterChangeRequestsByParameterID(ctx context.Context, parameterID uint) ([]*model.ParameterChangeRequest, error)
+	UpdateParameterChangeRequest(ctx context.Context, changeRequest *model.ParameterChangeRequest) error
+
 	// Database access for transactions
 	GetDB() *gorm.DB
 }
