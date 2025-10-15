@@ -4,8 +4,10 @@ import (
 	"net/http"
 	"strconv"
 
+	"api/config"
 	"api/internal/dto"
 	"api/internal/handler"
+	"api/internal/middleware"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
@@ -15,13 +17,15 @@ import (
 type Router struct {
 	handler *handler.Handler
 	logger  zerolog.Logger
+	config  *config.Config
 }
 
 // New creates a new router instance
-func New(h *handler.Handler, logger zerolog.Logger) *Router {
+func New(h *handler.Handler, logger zerolog.Logger, cfg *config.Config) *Router {
 	return &Router{
 		handler: h,
 		logger:  logger,
+		config:  cfg,
 	}
 }
 
@@ -36,60 +40,82 @@ func (r *Router) SetupRoutes(engine *gin.Engine) {
 	// Health check
 	engine.GET("/health", r.healthCheck)
 
+	// Auth routes (no versioning for OAuth)
+
 	// API v1 routes
 	v1 := engine.Group("/api/v1")
 	{
-		// Attribute routes
-		attributes := v1.Group("/attributes")
+		// Auth routes (public - no JWT middleware)
+		auth := v1.Group("/auth")
 		{
-			attributes.POST("", r.createAttribute)
-			attributes.GET("", r.getAllAttributes)
-			attributes.GET("/:id", r.getAttributeByID)
-			attributes.PATCH("/:id", r.updateAttribute)
-			attributes.DELETE("/:id", r.deleteAttribute)
-			attributes.PATCH("/:id/increment-usage", r.incrementAttributeUsageCount)
-			attributes.PATCH("/:id/decrement-usage", r.decrementAttributeUsageCount)
+			auth.GET("/google/login", r.googleLogin)
+			auth.POST("/google/callback", r.googleCallback)
+			auth.POST("/refresh", r.refreshToken)
+
+			// Protected auth routes (require JWT)
+			authProtected := auth.Group("")
+			authProtected.Use(middleware.JWTMiddleware(r.config))
+			{
+				authProtected.GET("/me", r.getCurrentUser)
+			}
 		}
 
-		// Segment routes
-		segments := v1.Group("/segments")
-		{
-			segments.POST("", r.createSegment)
-			segments.GET("", r.getAllSegments)
-			segments.GET("/:id", r.getSegmentByID)
-			segments.PATCH("/:id", r.updateSegment)
-			segments.DELETE("/:id", r.deleteSegment)
-		}
-
-		// Parameter routes
-		parameters := v1.Group("/parameters")
-		{
-			parameters.POST("", r.createParameter)
-			parameters.GET("", r.getAllParameters)
-			parameters.GET("/:id", r.getParameterByID)
-			parameters.PATCH("/:id", r.updateParameter)
-			parameters.PUT("/:id", r.updateParameterWithRules)
-			parameters.DELETE("/:id", r.deleteParameter)
-			parameters.POST("/simulate", r.simulateParameter)
-		}
-
-		// Experiment routes
-		experiments := v1.Group("/experiments")
-		{
-			experiments.POST("", r.createExperiment)
-			experiments.GET("", r.getAllExperiments)
-			experiments.GET("/:id", r.getExperimentByID)
-			experiments.PATCH("/:id/reject", r.rejectExperiment)
-			experiments.PATCH("/:id/approve", r.approveExperiment)
-			experiments.PATCH("/:id/abort", r.abortExperiment)
-		}
-
-		// SDK routes
+		// SDK routes (public - no JWT middleware, accessed by client SDKs)
 		sdk := v1.Group("/sdk")
 		{
 			sdk.POST("/metadata", r.getMetadataSDK)
 			sdk.POST("/parameters", r.getAllParametersSDK)
 			sdk.POST("/experiments", r.getAllExperimentsSDK)
+		}
+
+		// Protected routes group (require JWT authentication)
+		protected := v1.Group("")
+		protected.Use(middleware.JWTMiddleware(r.config))
+		{
+			// Attribute routes
+			attributes := protected.Group("/attributes")
+			{
+				attributes.POST("", r.createAttribute)
+				attributes.GET("", r.getAllAttributes)
+				attributes.GET("/:id", r.getAttributeByID)
+				attributes.PATCH("/:id", r.updateAttribute)
+				attributes.DELETE("/:id", r.deleteAttribute)
+				attributes.PATCH("/:id/increment-usage", r.incrementAttributeUsageCount)
+				attributes.PATCH("/:id/decrement-usage", r.decrementAttributeUsageCount)
+			}
+
+			// Segment routes
+			segments := protected.Group("/segments")
+			{
+				segments.POST("", r.createSegment)
+				segments.GET("", r.getAllSegments)
+				segments.GET("/:id", r.getSegmentByID)
+				segments.PATCH("/:id", r.updateSegment)
+				segments.DELETE("/:id", r.deleteSegment)
+			}
+
+			// Parameter routes
+			parameters := protected.Group("/parameters")
+			{
+				parameters.POST("", r.createParameter)
+				parameters.GET("", r.getAllParameters)
+				parameters.GET("/:id", r.getParameterByID)
+				parameters.PATCH("/:id", r.updateParameter)
+				parameters.PUT("/:id", r.updateParameterWithRules)
+				parameters.DELETE("/:id", r.deleteParameter)
+				parameters.POST("/simulate", r.simulateParameter)
+			}
+
+			// Experiment routes
+			experiments := protected.Group("/experiments")
+			{
+				experiments.POST("", r.createExperiment)
+				experiments.GET("", r.getAllExperiments)
+				experiments.GET("/:id", r.getExperimentByID)
+				experiments.PATCH("/:id/reject", r.rejectExperiment)
+				experiments.PATCH("/:id/approve", r.approveExperiment)
+				experiments.PATCH("/:id/abort", r.abortExperiment)
+			}
 		}
 	}
 }
@@ -639,6 +665,66 @@ func (r *Router) getAllExperimentsSDK(c *gin.Context) {
 	}
 
 	result, err := r.handler.GetAllExperimentsSDK(c.Request.Context(), &req)
+	if err != nil {
+		c.Error(err)
+		return
+	}
+
+	c.JSON(http.StatusOK, result)
+}
+
+// Auth handlers
+func (r *Router) googleLogin(c *gin.Context) {
+	result, err := r.handler.GoogleLogin(c.Request.Context())
+	if err != nil {
+		c.Error(err)
+		return
+	}
+
+	c.JSON(http.StatusOK, result)
+}
+
+func (r *Router) googleCallback(c *gin.Context) {
+	var req dto.GoogleCallbackRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.Error(err)
+		return
+	}
+
+	result, err := r.handler.GoogleCallback(c.Request.Context(), &req)
+	if err != nil {
+		c.Error(err)
+		return
+	}
+
+	c.JSON(http.StatusOK, result)
+}
+
+func (r *Router) refreshToken(c *gin.Context) {
+	var req dto.RefreshTokenRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.Error(err)
+		return
+	}
+
+	result, err := r.handler.RefreshToken(c.Request.Context(), &req)
+	if err != nil {
+		c.Error(err)
+		return
+	}
+
+	c.JSON(http.StatusOK, result)
+}
+
+func (r *Router) getCurrentUser(c *gin.Context) {
+	// Extract user ID from JWT token (set by JWT middleware)
+	userID, exists := middleware.GetUserIDFromContext(c)
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+
+	result, err := r.handler.GetCurrentUser(c.Request.Context(), userID)
 	if err != nil {
 		c.Error(err)
 		return

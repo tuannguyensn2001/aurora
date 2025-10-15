@@ -44,7 +44,7 @@ func ProvideHTTPServer(lc fx.Lifecycle, params ServerParams) *http.Server {
 	})
 
 	// Create router and setup routes
-	r := router.New(params.Handler, params.Logger)
+	r := router.New(params.Handler, params.Logger, params.Config)
 	r.SetupRoutes(engine)
 
 	server := &http.Server{

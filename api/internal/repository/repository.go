@@ -95,6 +95,15 @@ type Repository interface {
 	GetExperimentsActive(ctx context.Context) ([]model.Experiment, error)
 	UpdateExperimentRawValue(ctx context.Context, id uint) error
 
+	// User operations
+	CreateUser(ctx context.Context, user *model.User) error
+	GetUserByID(ctx context.Context, id uint) (*model.User, error)
+	GetUserByEmail(ctx context.Context, email string) (*model.User, error)
+	GetUserByGoogleID(ctx context.Context, googleID string) (*model.User, error)
+	UpdateUser(ctx context.Context, user *model.User) error
+	UpdateUserLastLogin(ctx context.Context, id uint) error
+	DeleteUser(ctx context.Context, id uint) error
+
 	// Database access for transactions
 	GetDB() *gorm.DB
 }

@@ -26,6 +26,17 @@ type Config struct {
 		Enable     bool   `yaml:"enable"`
 		BucketName string `yaml:"bucketName"`
 	} `yaml:"s3"`
+	OAuth struct {
+		Google struct {
+			ClientID     string `yaml:"clientId"`
+			ClientSecret string `yaml:"clientSecret"`
+			RedirectURL  string `yaml:"redirectUrl"`
+		} `yaml:"google"`
+	} `yaml:"oauth"`
+	JWT struct {
+		Secret     string `yaml:"secret"`
+		ExpireHour int    `yaml:"expireHour"`
+	} `yaml:"jwt"`
 }
 
 func Load(configPath string) (*Config, error) {

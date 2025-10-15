@@ -485,3 +485,81 @@ func (h *Handler) GetAllExperimentsSDK(ctx context.Context, req *dto.GetAllExper
 		Experiments: experiments,
 	}, nil
 }
+
+// GoogleLogin handles the Google OAuth login initiation
+func (h *Handler) GoogleLogin(ctx context.Context) (*dto.GoogleLoginResponse, error) {
+	logger := log.Ctx(ctx).With().Str("handler", "google-login").Logger()
+	logger.Info().Msg("Initiating Google OAuth login")
+
+	url, state, err := h.service.GetGoogleLoginURL(ctx, h.config)
+	if err != nil {
+		logger.Error().Err(err).Msg("Failed to generate Google login URL")
+		return nil, err
+	}
+
+	// In production, you'd want to store the state in a session or cache
+	// For now, we'll return it to the client to send back
+	logger.Info().Str("state", state).Msg("Generated OAuth state token")
+
+	return &dto.GoogleLoginResponse{
+		AuthURL: url,
+	}, nil
+}
+
+// GoogleCallback handles the OAuth callback from Google
+func (h *Handler) GoogleCallback(ctx context.Context, req *dto.GoogleCallbackRequest) (*dto.AuthResponse, error) {
+	logger := log.Ctx(ctx).With().Str("handler", "google-callback").Logger()
+	logger.Info().Msg("Handling Google OAuth callback")
+
+	// In production, you should validate the state token here
+	// For now, we'll process the callback directly
+
+	response, err := h.service.HandleGoogleCallback(ctx, h.config, req.Code, req.State)
+	if err != nil {
+		logger.Error().Err(err).Msg("Failed to handle Google callback")
+		return nil, err
+	}
+
+	logger.Info().Str("email", response.User.Email).Msg("Successfully authenticated user")
+	return response, nil
+}
+
+// RefreshToken handles token refresh requests
+func (h *Handler) RefreshToken(ctx context.Context, req *dto.RefreshTokenRequest) (*dto.AuthResponse, error) {
+	logger := log.Ctx(ctx).With().Str("handler", "refresh-token").Logger()
+	logger.Info().Msg("Refreshing access token")
+
+	response, err := h.service.RefreshToken(ctx, h.config, req.RefreshToken)
+	if err != nil {
+		logger.Error().Err(err).Msg("Failed to refresh token")
+		return nil, err
+	}
+
+	logger.Info().Str("email", response.User.Email).Msg("Successfully refreshed token")
+	return response, nil
+}
+
+// GetCurrentUser returns the current user information
+func (h *Handler) GetCurrentUser(ctx context.Context, userID uint) (*dto.UserInfo, error) {
+	logger := log.Ctx(ctx).With().Str("handler", "get-current-user").Uint("userID", userID).Logger()
+	logger.Info().Msg("Getting current user")
+
+	user, err := h.service.GetUserByID(ctx, userID)
+	if err != nil {
+		logger.Error().Err(err).Msg("Failed to get user")
+		return nil, err
+	}
+
+	lastLogin := user.CreatedAt
+	if user.LastLoginAt != nil {
+		lastLogin = *user.LastLoginAt
+	}
+
+	return &dto.UserInfo{
+		ID:          user.ID,
+		Email:       user.Email,
+		Name:        user.Name,
+		Picture:     user.Picture,
+		LastLoginAt: lastLogin,
+	}, nil
+}

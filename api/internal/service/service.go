@@ -1,6 +1,7 @@
 package service
 
 import (
+	"api/config"
 	"api/internal/dto"
 	"api/internal/model"
 	"api/internal/repository"
@@ -9,6 +10,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/riverqueue/river"
+	"golang.org/x/oauth2"
 )
 
 // Service defines the interface for all business logic operations
@@ -55,6 +57,15 @@ type Service interface {
 	AbortExperiment(ctx context.Context, id uint, req *dto.AbortExperimentRequest) (*model.Experiment, error)
 	SimulateParameter(ctx context.Context, req *dto.SimulateParameterRequest) (dto.SimulateParameterResponse, error)
 	GetActiveExperimentsSDK(ctx context.Context) ([]sdk.Experiment, error)
+
+	// Auth operations
+	GetGoogleOAuthConfig(cfg *config.Config) *oauth2.Config
+	GenerateStateToken() (string, error)
+	GetGoogleLoginURL(ctx context.Context, cfg *config.Config) (string, string, error)
+	HandleGoogleCallback(ctx context.Context, cfg *config.Config, code string, state string) (*dto.AuthResponse, error)
+	GetGoogleUserInfo(ctx context.Context, accessToken string) (*GoogleUserInfo, error)
+	GetUserByID(ctx context.Context, id uint) (*model.User, error)
+	RefreshToken(ctx context.Context, cfg *config.Config, refreshToken string) (*dto.AuthResponse, error)
 }
 
 // service implements Service
