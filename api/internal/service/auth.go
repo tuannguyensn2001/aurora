@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/rs/zerolog/log"
@@ -28,6 +29,31 @@ type GoogleUserInfo struct {
 	VerifiedEmail bool   `json:"verified_email"`
 	Name          string `json:"name"`
 	Picture       string `json:"picture"`
+}
+
+// isEmailDomainAllowed checks if the email domain is in the allowed domains list
+// If allowedDomains is empty, all domains are allowed
+func isEmailDomainAllowed(email string, allowedDomains []string) bool {
+	// If no domains are specified, allow all
+	if len(allowedDomains) == 0 {
+		return true
+	}
+
+	// Extract domain from email
+	parts := strings.Split(email, "@")
+	if len(parts) != 2 {
+		return false
+	}
+	domain := strings.ToLower(parts[1])
+
+	// Check if domain is in allowed list
+	for _, allowedDomain := range allowedDomains {
+		if strings.ToLower(allowedDomain) == domain {
+			return true
+		}
+	}
+
+	return false
 }
 
 // GetGoogleOAuthConfig returns the OAuth2 config for Google
@@ -86,6 +112,12 @@ func (s *service) HandleGoogleCallback(ctx context.Context, cfg *config.Config, 
 	if err != nil {
 		logger.Error().Err(err).Msg("Failed to get user info")
 		return nil, fmt.Errorf("failed to get user info: %w", err)
+	}
+
+	// Validate email domain
+	if !isEmailDomainAllowed(userInfo.Email, cfg.OAuth.AllowedDomains) {
+		logger.Warn().Str("email", userInfo.Email).Msg("Email domain not allowed")
+		return nil, fmt.Errorf("email domain is not allowed for this organization")
 	}
 
 	// Check if user exists, create if not
@@ -220,6 +252,12 @@ func (s *service) RefreshToken(ctx context.Context, cfg *config.Config, refreshT
 	if err != nil {
 		logger.Error().Err(err).Msg("Failed to get user info")
 		return nil, fmt.Errorf("failed to get user info: %w", err)
+	}
+
+	// Validate email domain
+	if !isEmailDomainAllowed(userInfo.Email, cfg.OAuth.AllowedDomains) {
+		logger.Warn().Str("email", userInfo.Email).Msg("Email domain not allowed during token refresh")
+		return nil, fmt.Errorf("email domain is not allowed for this organization")
 	}
 
 	// Update user's tokens

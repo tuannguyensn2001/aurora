@@ -32,6 +32,7 @@ type Config struct {
 			ClientSecret string `yaml:"clientSecret"`
 			RedirectURL  string `yaml:"redirectUrl"`
 		} `yaml:"google"`
+		AllowedDomains []string `yaml:"allowedDomains"` // List of allowed email domains (e.g., ["example.com", "company.org"])
 	} `yaml:"oauth"`
 	JWT struct {
 		Secret     string `yaml:"secret"`

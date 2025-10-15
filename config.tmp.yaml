@@ -14,4 +14,17 @@ database:
   sslmode: disable
   
 s3:
+  enable: true
   bucketName: dev-aurora-experiment
+
+oauth:
+  google:
+    clientId: dummy
+    clientSecret: dummy
+    redirectUrl: "http://localhost:3000/auth/callback"
+  allowedDomains:   # Add allowed email domains here, e.g., ["yourcompany.com", "partner.org"]. Empty array allows all domains. 
+    - gmail.com
+
+jwt:
+  secret: "your-secret-key-change-this-in-production-use-long-random-string"
+  expireHour: 24  # 24 hours
