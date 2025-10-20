@@ -107,8 +107,11 @@ type Repository interface {
 	// Parameter Change Request operations
 	CreateParameterChangeRequest(ctx context.Context, changeRequest *model.ParameterChangeRequest) error
 	GetParameterChangeRequestByID(ctx context.Context, id uint) (*model.ParameterChangeRequest, error)
+	GetParameterChangeRequestByIDWithDetails(ctx context.Context, id uint) (*model.ParameterChangeRequest, error)
 	GetPendingParameterChangeRequestByParameterID(ctx context.Context, parameterID uint) (*model.ParameterChangeRequest, error)
 	GetParameterChangeRequestsByParameterID(ctx context.Context, parameterID uint) ([]*model.ParameterChangeRequest, error)
+	GetParameterChangeRequestsByStatus(ctx context.Context, status model.ParameterChangeRequestStatus, limit, offset int) ([]*model.ParameterChangeRequest, error)
+	GetParameterChangeRequestsByStatusWithPagination(ctx context.Context, status model.ParameterChangeRequestStatus, limit, offset int) ([]*model.ParameterChangeRequest, int64, error)
 	UpdateParameterChangeRequest(ctx context.Context, changeRequest *model.ParameterChangeRequest) error
 
 	// Database access for transactions

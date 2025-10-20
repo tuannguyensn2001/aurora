@@ -28,6 +28,15 @@ type ParameterChangeData struct {
 	Rules               []ParameterRuleRequest `json:"rules,omitempty"`
 }
 
+// ParameterCurrentConfig holds the current configuration of a parameter at the time of change request
+type ParameterCurrentConfig struct {
+	Name                string                 `json:"name"`
+	Description         string                 `json:"description"`
+	DataType            ParameterDataType      `json:"dataType"`
+	DefaultRolloutValue interface{}            `json:"defaultRolloutValue"`
+	Rules               []ParameterRuleRequest `json:"rules,omitempty"`
+}
+
 // ParameterRuleRequest represents a rule in the change request
 type ParameterRuleRequest struct {
 	Name         string                          `json:"name"`
@@ -67,6 +76,27 @@ func (pcd ParameterChangeData) Value() (driver.Value, error) {
 	return json.Marshal(pcd)
 }
 
+// Scan implements the sql.Scanner interface for ParameterCurrentConfig
+func (pcc *ParameterCurrentConfig) Scan(value interface{}) error {
+	if value == nil {
+		return nil
+	}
+
+	switch v := value.(type) {
+	case []byte:
+		return json.Unmarshal(v, pcc)
+	case string:
+		return json.Unmarshal([]byte(v), pcc)
+	default:
+		return errors.New("cannot scan ParameterCurrentConfig")
+	}
+}
+
+// Value implements the driver.Valuer interface for ParameterCurrentConfig
+func (pcc ParameterCurrentConfig) Value() (driver.Value, error) {
+	return json.Marshal(pcc)
+}
+
 // ParameterChangeRequest represents a request to change a parameter
 type ParameterChangeRequest struct {
 	ID                uint                         `gorm:"primaryKey;autoIncrement" json:"id"`
@@ -75,6 +105,7 @@ type ParameterChangeRequest struct {
 	Status            ParameterChangeRequestStatus `gorm:"type:parameter_change_request_status;not null;default:'pending'" json:"status"`
 	Description       string                       `gorm:"type:text" json:"description"`
 	ChangeData        ParameterChangeData          `gorm:"type:jsonb;not null;column:change_data" json:"changeData"`
+	CurrentConfig     ParameterCurrentConfig       `gorm:"type:jsonb;not null;column:current_config" json:"currentConfig"`
 	ReviewedByUserID  *uint                        `json:"reviewedByUserId,omitempty"`
 	ReviewedAt        *time.Time                   `json:"reviewedAt,omitempty"`
 	CreatedAt         time.Time                    `gorm:"autoCreateTime" json:"createdAt"`

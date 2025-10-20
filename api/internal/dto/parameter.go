@@ -259,6 +259,7 @@ type ParameterChangeRequestResponse struct {
 	Status            model.ParameterChangeRequestStatus `json:"status"`
 	Description       string                             `json:"description"`
 	ChangeData        model.ParameterChangeData          `json:"changeData"`
+	CurrentConfig     model.ParameterCurrentConfig       `json:"currentConfig"`
 	ReviewedByUserID  *uint                              `json:"reviewedByUserId,omitempty"`
 	ReviewedByUser    *UserInfo                          `json:"reviewedByUser,omitempty"`
 	ReviewedAt        *time.Time                         `json:"reviewedAt,omitempty"`
@@ -276,6 +277,31 @@ type RejectParameterChangeRequestRequest struct {
 	Comment string `json:"comment"`
 }
 
+// ParameterChangeRequestSummaryResponse represents a summary response for parameter change requests
+type ParameterChangeRequestSummaryResponse struct {
+	ID            uint                               `json:"id"`
+	ParameterID   uint                               `json:"parameterId"`
+	ParameterName string                             `json:"parameterName"`
+	Status        model.ParameterChangeRequestStatus `json:"status"`
+	Description   string                             `json:"description"`
+	CreatedAt     time.Time                          `json:"createdAt"`
+	UpdatedAt     time.Time                          `json:"updatedAt"`
+}
+
+// ParameterChangeRequestSummaryListResponse represents the response for listing parameter change request summaries
+type ParameterChangeRequestSummaryListResponse struct {
+	ChangeRequests []ParameterChangeRequestSummaryResponse `json:"changeRequests"`
+	Total          int64                                   `json:"total"`
+}
+
+// ParameterChangeRequestListResponse represents the response for listing parameter change requests with pagination
+type ParameterChangeRequestListResponse struct {
+	ChangeRequests []ParameterChangeRequestResponse `json:"changeRequests"`
+	Total          int64                            `json:"total"`
+	Limit          int                              `json:"limit"`
+	Offset         int                              `json:"offset"`
+}
+
 // ToParameterChangeRequestResponse converts model.ParameterChangeRequest to ParameterChangeRequestResponse
 func ToParameterChangeRequestResponse(changeRequest *model.ParameterChangeRequest) ParameterChangeRequestResponse {
 	response := ParameterChangeRequestResponse{
@@ -285,6 +311,7 @@ func ToParameterChangeRequestResponse(changeRequest *model.ParameterChangeReques
 		Status:            changeRequest.Status,
 		Description:       changeRequest.Description,
 		ChangeData:        changeRequest.ChangeData,
+		CurrentConfig:     changeRequest.CurrentConfig,
 		ReviewedByUserID:  changeRequest.ReviewedByUserID,
 		ReviewedAt:        changeRequest.ReviewedAt,
 		CreatedAt:         changeRequest.CreatedAt,
@@ -327,4 +354,18 @@ func ToParameterChangeRequestResponse(changeRequest *model.ParameterChangeReques
 	}
 
 	return response
+}
+
+// ToParameterChangeRequestListResponse converts slice of model.ParameterChangeRequest to ParameterChangeRequestListResponse
+func ToParameterChangeRequestListResponse(changeRequests []*model.ParameterChangeRequest, total int64, limit, offset int) ParameterChangeRequestListResponse {
+	responses := make([]ParameterChangeRequestResponse, len(changeRequests))
+	for i, changeRequest := range changeRequests {
+		responses[i] = ToParameterChangeRequestResponse(changeRequest)
+	}
+	return ParameterChangeRequestListResponse{
+		ChangeRequests: responses,
+		Total:          total,
+		Limit:          limit,
+		Offset:         offset,
+	}
 }

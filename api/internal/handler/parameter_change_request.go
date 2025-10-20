@@ -2,6 +2,7 @@ package handler
 
 import (
 	"api/internal/dto"
+	"api/internal/model"
 	"context"
 
 	"github.com/rs/zerolog/log"
@@ -98,6 +99,36 @@ func (h *Handler) RejectParameterChangeRequest(ctx context.Context, id uint, use
 	changeRequest, err := h.service.RejectParameterChangeRequest(ctx, id, userID, req)
 	if err != nil {
 		logger.Error().Err(err).Msg("Failed to reject parameter change request")
+		return nil, err
+	}
+
+	response := dto.ToParameterChangeRequestResponse(changeRequest)
+	return &response, nil
+}
+
+// GetParameterChangeRequestsByStatus handles getting parameter change requests by status with pagination
+func (h *Handler) GetParameterChangeRequestsByStatus(ctx context.Context, status model.ParameterChangeRequestStatus, limit, offset int) (*dto.ParameterChangeRequestListResponse, error) {
+	logger := log.Ctx(ctx).With().Str("handler", "get-parameter-change-requests-by-status").Str("status", string(status)).Logger()
+	logger.Info().Msg("Getting parameter change requests by status")
+
+	changeRequests, total, err := h.service.GetParameterChangeRequestsByStatus(ctx, status, limit, offset)
+	if err != nil {
+		logger.Error().Err(err).Msg("Failed to get parameter change requests by status")
+		return nil, err
+	}
+
+	response := dto.ToParameterChangeRequestListResponse(changeRequests, total, limit, offset)
+	return &response, nil
+}
+
+// GetParameterChangeRequestByIDWithDetails handles getting a detailed parameter change request by ID
+func (h *Handler) GetParameterChangeRequestByIDWithDetails(ctx context.Context, id uint) (*dto.ParameterChangeRequestResponse, error) {
+	logger := log.Ctx(ctx).With().Str("handler", "get-parameter-change-request-by-id-with-details").Uint("id", id).Logger()
+	logger.Info().Msg("Getting detailed parameter change request by ID")
+
+	changeRequest, err := h.service.GetParameterChangeRequestByIDWithDetails(ctx, id)
+	if err != nil {
+		logger.Error().Err(err).Msg("Failed to get detailed parameter change request")
 		return nil, err
 	}
 

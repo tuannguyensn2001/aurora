@@ -51,8 +51,10 @@ type Service interface {
 	// Parameter Change Request operations
 	CreateParameterChangeRequest(ctx context.Context, userID uint, req *dto.CreateParameterChangeRequestRequest) (*model.ParameterChangeRequest, error)
 	GetParameterChangeRequestByID(ctx context.Context, id uint) (*model.ParameterChangeRequest, error)
+	GetParameterChangeRequestByIDWithDetails(ctx context.Context, id uint) (*model.ParameterChangeRequest, error)
 	GetPendingParameterChangeRequestByParameterID(ctx context.Context, parameterID uint) (*model.ParameterChangeRequest, error)
 	GetParameterChangeRequestsByParameterID(ctx context.Context, parameterID uint) ([]*model.ParameterChangeRequest, error)
+	GetParameterChangeRequestsByStatus(ctx context.Context, status model.ParameterChangeRequestStatus, limit, offset int) ([]*model.ParameterChangeRequest, int64, error)
 	ApproveParameterChangeRequest(ctx context.Context, id uint, userID uint, req *dto.ApproveParameterChangeRequestRequest) (*model.ParameterChangeRequest, error)
 	RejectParameterChangeRequest(ctx context.Context, id uint, userID uint, req *dto.RejectParameterChangeRequestRequest) (*model.ParameterChangeRequest, error)
 

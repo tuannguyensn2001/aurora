@@ -13,11 +13,49 @@ import (
 	"gorm.io/gorm"
 )
 
+// convertParameterToCurrentConfig converts a Parameter model to ParameterCurrentConfig
+func (s *service) convertParameterToCurrentConfig(parameter *model.Parameter) model.ParameterCurrentConfig {
+	// Convert rules to ParameterRuleRequest format
+	rules := make([]model.ParameterRuleRequest, len(parameter.Rules))
+	for i, rule := range parameter.Rules {
+		ruleReq := model.ParameterRuleRequest{
+			Name:         rule.Name,
+			Description:  rule.Description,
+			Type:         rule.Type,
+			RolloutValue: rule.RolloutValue.Data,
+			SegmentID:    rule.SegmentID,
+			MatchType:    rule.MatchType,
+		}
+
+		// Convert conditions if they exist
+		if len(rule.Conditions) > 0 {
+			ruleReq.Conditions = make([]model.ParameterRuleConditionRequest, len(rule.Conditions))
+			for j, condition := range rule.Conditions {
+				ruleReq.Conditions[j] = model.ParameterRuleConditionRequest{
+					AttributeID: condition.AttributeID,
+					Operator:    condition.Operator,
+					Value:       condition.Value,
+				}
+			}
+		}
+
+		rules[i] = ruleReq
+	}
+
+	return model.ParameterCurrentConfig{
+		Name:                parameter.Name,
+		Description:         parameter.Description,
+		DataType:            parameter.DataType,
+		DefaultRolloutValue: parameter.DefaultRolloutValue.Data,
+		Rules:               rules,
+	}
+}
+
 // CreateParameterChangeRequest creates a new parameter change request
 func (s *service) CreateParameterChangeRequest(ctx context.Context, userID uint, req *dto.CreateParameterChangeRequestRequest) (*model.ParameterChangeRequest, error) {
 	logger := log.Ctx(ctx).With().Str("service", "create-parameter-change-request").Uint("parameterId", req.ParameterID).Logger()
 
-	// Check if parameter exists
+	// Check if parameter exists and load its rules
 	parameter, err := s.repo.GetParameterByID(ctx, req.ParameterID)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -34,6 +72,9 @@ func (s *service) CreateParameterChangeRequest(ctx context.Context, userID uint,
 	if existing != nil {
 		return nil, fmt.Errorf("parameter '%s' already has a pending change request (ID: %d). Please approve or reject it before creating a new one", parameter.Name, existing.ID)
 	}
+
+	// Capture current parameter configuration
+	currentConfig := s.convertParameterToCurrentConfig(parameter)
 
 	// Build the change data from the request
 	changeData := model.ParameterChangeData{
@@ -79,6 +120,7 @@ func (s *service) CreateParameterChangeRequest(ctx context.Context, userID uint,
 		Status:            model.ChangeRequestStatusPending,
 		Description:       req.Description,
 		ChangeData:        changeData,
+		CurrentConfig:     currentConfig,
 	}
 
 	if err := s.repo.CreateParameterChangeRequest(ctx, changeRequest); err != nil {
@@ -305,4 +347,21 @@ func (s *service) RejectParameterChangeRequest(ctx context.Context, id uint, use
 
 	// Reload with relationships
 	return s.repo.GetParameterChangeRequestByID(ctx, changeRequest.ID)
+}
+
+// GetParameterChangeRequestsByStatus retrieves parameter change requests by status with pagination
+func (s *service) GetParameterChangeRequestsByStatus(ctx context.Context, status model.ParameterChangeRequestStatus, limit, offset int) ([]*model.ParameterChangeRequest, int64, error) {
+	return s.repo.GetParameterChangeRequestsByStatusWithPagination(ctx, status, limit, offset)
+}
+
+// GetParameterChangeRequestByIDWithDetails retrieves a parameter change request by ID with detailed information
+func (s *service) GetParameterChangeRequestByIDWithDetails(ctx context.Context, id uint) (*model.ParameterChangeRequest, error) {
+	changeRequest, err := s.repo.GetParameterChangeRequestByIDWithDetails(ctx, id)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, fmt.Errorf("parameter change request with ID %d not found", id)
+		}
+		return nil, err
+	}
+	return changeRequest, nil
 }

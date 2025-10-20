@@ -8,6 +8,7 @@ import (
 	"api/internal/dto"
 	"api/internal/handler"
 	"api/internal/middleware"
+	"api/internal/model"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
@@ -113,7 +114,9 @@ func (r *Router) SetupRoutes(engine *gin.Engine) {
 			// Parameter Change Request routes
 			changeRequests := protected.Group("/parameter-change-requests")
 			{
+				changeRequests.GET("", r.getParameterChangeRequestsByStatus)
 				changeRequests.GET("/:id", r.getParameterChangeRequestByID)
+				changeRequests.GET("/:id/details", r.getParameterChangeRequestByIDWithDetails)
 				changeRequests.PATCH("/:id/approve", r.approveParameterChangeRequest)
 				changeRequests.PATCH("/:id/reject", r.rejectParameterChangeRequest)
 			}
@@ -881,6 +884,71 @@ func (r *Router) rejectParameterChangeRequest(c *gin.Context) {
 	}
 
 	result, err := r.handler.RejectParameterChangeRequest(c.Request.Context(), id, userID, &req)
+	if err != nil {
+		c.Error(err)
+		return
+	}
+
+	c.JSON(http.StatusOK, result)
+}
+
+func (r *Router) getParameterChangeRequestsByStatus(c *gin.Context) {
+	// Parse query parameters
+	status := c.Query("status")
+	if status == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "status parameter is required"})
+		return
+	}
+
+	// Validate status
+	var changeRequestStatus model.ParameterChangeRequestStatus
+	switch status {
+	case "pending":
+		changeRequestStatus = model.ChangeRequestStatusPending
+	case "approved":
+		changeRequestStatus = model.ChangeRequestStatusApproved
+	case "rejected":
+		changeRequestStatus = model.ChangeRequestStatusRejected
+	case "cancelled":
+		changeRequestStatus = model.ChangeRequestStatusCancelled
+	default:
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid status. Must be one of: pending, approved, rejected, cancelled"})
+		return
+	}
+
+	// Parse pagination parameters
+	limitStr := c.DefaultQuery("limit", "10")
+	offsetStr := c.DefaultQuery("offset", "0")
+
+	limit, err := strconv.Atoi(limitStr)
+	if err != nil || limit < 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid limit parameter"})
+		return
+	}
+
+	offset, err := strconv.Atoi(offsetStr)
+	if err != nil || offset < 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid offset parameter"})
+		return
+	}
+
+	result, err := r.handler.GetParameterChangeRequestsByStatus(c.Request.Context(), changeRequestStatus, limit, offset)
+	if err != nil {
+		c.Error(err)
+		return
+	}
+
+	c.JSON(http.StatusOK, result)
+}
+
+func (r *Router) getParameterChangeRequestByIDWithDetails(c *gin.Context) {
+	id, err := parseIDParam(c)
+	if err != nil {
+		c.Error(err)
+		return
+	}
+
+	result, err := r.handler.GetParameterChangeRequestByIDWithDetails(c.Request.Context(), id)
 	if err != nil {
 		c.Error(err)
 		return
