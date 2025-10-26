@@ -3,7 +3,7 @@
 [![Go Version](https://img.shields.io/badge/Go-1.24+-00ADD8?style=flat&logo=go)](https://golang.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15+-316192?style=flat&logo=postgresql)](https://www.postgresql.org)
-[![GitHub stars](https://img.shields.io/github/stars/your-org/aurora?style=social)](https://github.com/your-org/aurora)
+[![GitHub stars](https://img.shields.io/github/stars/tuannguyensn2001/aurora?style=social)](https://github.com/tuannguyensn2001/aurora)
 
 ## Introduction
 
@@ -25,7 +25,7 @@ Start Aurora with Docker Compose - no installation required:
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-org/aurora.git
+git clone https://github.com/tuannguyensn2001/aurora.git
 cd aurora
 
 # Copy configuration file
@@ -36,6 +36,8 @@ docker-compose up -d
 ```
 
 The Aurora API will be available at `http://localhost:9999`.
+
+Access `http://localhost:3000` to see the Aurora UI dashboard.
 
 ### Use the SDK
 
@@ -48,7 +50,7 @@ import (
     "log"
     "time"
     
-    "github.com/your-org/aurora/sdk"
+    "github.com/tuannguyensn2001/aurora/sdk"
 )
 
 func main() {
@@ -108,7 +110,7 @@ The Aurora SDK provides a lightweight Go client library for evaluating feature f
 ### Installation
 
 ```bash
-go get github.com/your-org/aurora/sdk
+go get github.com/tuannguyensn2001/aurora/sdk
 ```
 
 ### Basic Usage
@@ -122,7 +124,7 @@ import (
     "log"
     "time"
     
-    "github.com/your-org/aurora/sdk"
+    "github.com/tuannguyensn2001/aurora/sdk"
 )
 
 func main() {
@@ -323,15 +325,15 @@ Aurora is open source software licensed under the [MIT License](LICENSE).
 
 - 📖 [Documentation](https://docs.your-aurora-instance.com) (coming soon)
 - 💬 [Community Slack](https://join.slack.com/your-workspace) (coming soon)
-- 🐛 [Issue Tracker](https://github.com/your-org/aurora/issues)
+- 🐛 [Issue Tracker](https://github.com/tuannguyensn2001/aurora/issues)
 - 📧 Email: support@your-domain.com
 
 ## 📊 Stats
 
-![GitHub stars](https://img.shields.io/github/stars/your-org/aurora?style=social)
-![GitHub forks](https://img.shields.io/github/forks/your-org/aurora?style=social)
-![GitHub issues](https://img.shields.io/github/issues/your-org/aurora)
-![GitHub pull requests](https://img.shields.io/github/issues-pr/your-org/aurora)
+![GitHub stars](https://img.shields.io/github/stars/tuannguyensn2001/aurora?style=social)
+![GitHub forks](https://img.shields.io/github/forks/tuannguyensn2001/aurora?style=social)
+![GitHub issues](https://img.shields.io/github/issues/tuannguyensn2001/aurora)
+![GitHub pull requests](https://img.shields.io/github/issues-pr/tuannguyensn2001/aurora)
 
 ---
 
