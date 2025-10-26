@@ -5,8 +5,6 @@
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15+-316192?style=flat&logo=postgresql)](https://www.postgresql.org)
 [![GitHub stars](https://img.shields.io/github/stars/your-org/aurora?style=social)](https://github.com/your-org/aurora)
 
-**Introduction •** **Getting Started •** **SDK Usage •** **Contributing •** **Documentation**
-
 ## Introduction
 
 Aurora is a durable experimentation platform that enables developers to build scalable A/B testing and feature flagging systems without sacrificing performance or reliability. The Aurora server executes feature evaluations and experiment assignments in a resilient manner that automatically handles configuration updates, network failures, and provides consistent user experiences.
@@ -15,11 +13,11 @@ Aurora is built with modern Go architecture, providing enterprise-grade experime
 
 ### Why Aurora?
 
-**🔓 Open Source**: Complete control over your experimentation infrastructure without vendor lock-in
-**⚡ High Performance**: Built in Go for speed and efficiency, handling millions of evaluations per second
-**🏗️ Modern Architecture**: Clean, maintainable codebase using industry best practices
-**📊 Enterprise Ready**: Designed for scale with support for complex targeting and segmentation
-**🔌 Easy Integration**: Simple SDKs for seamless adoption across your stack
+- **🔓 Open Source**: Complete control over your experimentation infrastructure without vendor lock-in
+- **⚡ High Performance**: Built in Go for speed and efficiency, handling millions of evaluations per second
+- **🏗️ Modern Architecture**: Clean, maintainable codebase using industry best practices
+- **📊 Enterprise Ready**: Designed for scale with support for complex targeting and segmentation
+- **🔌 Easy Integration**: Simple SDKs for seamless adoption across your stack
 
 ## 🚀 Quick Start
 
@@ -97,47 +95,13 @@ func main() {
 
 ## ✨ Features
 
-Aurora provides comprehensive experimentation and feature management capabilities designed for modern applications.
-
-### 🚩 Feature Flagging
-
-- **Advanced Targeting**: Target users based on custom attributes, segments, and complex conditions
-- **Gradual Rollouts**: Control feature exposure with percentage-based traffic allocation
-- **Kill Switches**: Instantly disable features across all environments
-- **Environment Management**: Separate configurations for development, staging, and production
-- **Type-Safe Evaluation**: Strong typing for parameters (string, number, boolean, JSON)
-
-### 🧪 A/B Testing
-
-- **Statistical Significance**: Built-in support for proper experiment design and analysis
-- **Consistent Hashing**: Deterministic user bucketing using MurmurHash3 algorithm
-- **Traffic Splitting**: Precise control over experiment traffic allocation
-- **Multi-Variant Testing**: Support for A/B/C and more complex experiment designs
-- **Experiment Lifecycle**: Schedule, run, and analyze experiments with proper controls
-
-### 🎯 Audience Segmentation
-
-- **Dynamic Segments**: Create user segments based on real-time attributes
-- **Complex Conditions**: Support for AND/OR logic with multiple attribute conditions
-- **Attribute Types**: String, number, boolean, and enum attribute support
-- **Nested Targeting**: Combine segments with individual attribute targeting
-- **Real-time Updates**: Segment definitions update without code deployments
-
-### ⚡ Performance & Reliability
-
-- **Local Caching**: Ultra-fast evaluations with BadgerDB-backed storage
-- **Background Sync**: Automatic configuration updates with configurable refresh rates
-- **Offline Support**: Graceful degradation when network is unavailable
-- **S3 Distribution**: Optional CDN-like configuration delivery via AWS S3
-- **Sub-millisecond Latency**: Optimized for high-throughput applications
-
-### 🔧 Developer Experience
-
-- **Simple SDK**: Lightweight Go client with intuitive API design
-- **Comprehensive Error Handling**: Detailed error types with graceful fallbacks
-- **Flexible Configuration**: YAML-based configuration with environment overrides
-- **Zero Dependencies**: Standalone Go binaries, no external runtime required
-- **Rich Logging**: Configurable logging levels with structured output
+- **🚩 Feature Flags**: Advanced targeting, gradual rollouts, and kill switches
+- **🧪 A/B Testing**: Run experiments with sophisticated targeting rules
+- **🎯 Audience Segmentation**: Define user segments based on custom attributes
+- **📈 Dynamic Parameters**: Change feature configurations without deployments
+- **🔄 Real-time Updates**: SDK automatically fetches latest configurations
+- **💾 Local Caching**: Ultra-fast evaluations with BadgerDB-backed storage
+- **☁️ S3 Distribution**: Optional CDN-like configuration delivery via AWS S3
 
 ## 🎬 Getting Started
 
