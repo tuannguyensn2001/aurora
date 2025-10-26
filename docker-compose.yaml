@@ -57,6 +57,23 @@ services:
       retries: 3
       start_period: 40s
 
+  ui:
+    image: tuannguyensn2001/aurora-ui:latest
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+      NEXT_TELEMETRY_DISABLED: 1
+    restart: unless-stopped
+    networks:
+      - aurora-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://ui:3000/api/hello"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
 volumes:
   postgres_data:
     driver: local
