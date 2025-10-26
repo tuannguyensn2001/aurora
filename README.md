@@ -91,6 +91,7 @@ func main() {
 - [Features](#-features)
 - [Getting Started](#-getting-started)
 - [SDK Usage](#-sdk-usage)
+- [SDK Documentation](#-sdk-documentation)
 - [License](#-license)
 
 ## ✨ Features
@@ -317,6 +318,13 @@ if result.HasError() {
 value := result.AsString("default_value")
 ```
 
+## 📚 SDK Documentation
+
+For comprehensive SDK documentation including detailed API reference, advanced configuration options, error handling patterns, and troubleshooting guides, see:
+
+**[📖 Complete SDK Documentation](./SDK_DOCUMENTATION.md)**
+
+
 ## 📄 License
 
 Aurora is open source software licensed under the [MIT License](LICENSE).
@@ -340,4 +348,5 @@ Aurora is open source software licensed under the [MIT License](LICENSE).
 **Built with ❤️ by the Aurora Team**
 
 [Website](https://your-aurora-instance.com) • [Documentation](https://docs.your-aurora-instance.com) • [Blog](https://blog.your-aurora-instance.com)
+
 
