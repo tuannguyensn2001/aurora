@@ -21,20 +21,18 @@ Aurora is built with modern Go architecture, providing enterprise-grade experime
 
 ## 🚀 Quick Start
 
-### Download and Start Aurora Server Locally
-
-Execute the following commands to start Aurora with all dependencies:
+Start Aurora with Docker Compose - no installation required:
 
 ```bash
 # Clone the repository
 git clone https://github.com/your-org/aurora.git
 cd aurora
 
-# Start PostgreSQL and run migrations
-make dev-setup
+# Copy configuration file
+cp config.tmp.yaml config.yaml
 
-# Start the Aurora API server
-make server
+# Start everything with one command
+docker-compose up -d
 ```
 
 The Aurora API will be available at `http://localhost:9999`.
@@ -102,73 +100,6 @@ func main() {
 - **🔄 Real-time Updates**: SDK automatically fetches latest configurations
 - **💾 Local Caching**: Ultra-fast evaluations with BadgerDB-backed storage
 - **☁️ S3 Distribution**: Optional CDN-like configuration delivery via AWS S3
-
-## 🎬 Getting Started
-
-### Prerequisites
-
-- Go 1.24+ 
-- Docker & Docker Compose
-- PostgreSQL 15+ (via Docker)
-- Make (optional, for convenience commands)
-
-### Installation
-
-#### Option 1: Docker Compose (Recommended)
-
-```bash
-# Clone the repository
-git clone https://github.com/your-org/aurora.git
-cd aurora
-
-# Start PostgreSQL
-make docker-up
-
-# Run migrations
-make migrate-up
-
-# Start the API server
-make server
-```
-
-#### Option 2: Manual Setup
-
-```bash
-# Install dependencies
-cd api
-go mod download
-
-cd ../sdk
-go mod download
-
-# Configure database connection
-cp config.tmp.yaml config.yaml
-# Edit config.yaml with your settings
-
-# Run migrations
-migrate -path api/migrations -database "postgres://postgres:postgres@localhost:5432/aurora_dev?sslmode=disable" up
-
-# Start the server
-cd api
-go run cmd/main.go -config ../config.yaml
-```
-
-### Database Setup
-
-The project uses `golang-migrate` for database migrations. Install it:
-
-```bash
-go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
-```
-
-Available migration commands:
-
-```bash
-make migrate-up         # Apply all migrations
-make migrate-down       # Rollback one migration
-make migrate-down-all   # Rollback all migrations
-make migrate-create NAME=your_migration_name  # Create new migration
-```
 
 ## 💻 SDK Usage
 
