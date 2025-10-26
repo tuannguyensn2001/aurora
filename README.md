@@ -1,124 +1,143 @@
-# Aurora
-
-**Open Source Feature Flagging and A/B Testing Platform**
+# Aurora—Open Source Feature Flagging and A/B Testing Platform
 
 [![Go Version](https://img.shields.io/badge/Go-1.24+-00ADD8?style=flat&logo=go)](https://golang.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15+-316192?style=flat&logo=postgresql)](https://www.postgresql.org)
+[![GitHub stars](https://img.shields.io/github/stars/your-org/aurora?style=social)](https://github.com/your-org/aurora)
 
----
+**Introduction •** **Getting Started •** **SDK Usage •** **Contributing •** **Documentation**
 
-## 🚀 Quick Start
+## Introduction
 
-Get up and running in under 2 minutes:
+Aurora is a durable experimentation platform that enables developers to build scalable A/B testing and feature flagging systems without sacrificing performance or reliability. The Aurora server executes feature evaluations and experiment assignments in a resilient manner that automatically handles configuration updates, network failures, and provides consistent user experiences.
 
-```bash
-git clone https://github.com/your-org/aurora.git
-cd aurora
-make dev-setup
-make server
-```
-
-Then visit `http://localhost:9999` to access the API.
-
-## 📖 Table of Contents
-
-- [Philosophy](#philosophy)
-- [Features](#features)
-- [Architecture](#architecture)
-- [Getting Started](#getting-started)
-- [SDK Usage](#sdk-usage)
-- [Configuration](#configuration)
-- [Development](#development)
-- [API Documentation](#api-documentation)
-- [Contributing](#contributing)
-- [License](#license)
-
-## 🎯 Philosophy
-
-The top 1% of companies invest thousands of engineering hours building sophisticated feature flagging and experimentation platforms in-house. The remaining 99% either pay premium prices for SaaS solutions or struggle with fragmented open-source libraries.
-
-**Aurora bridges this gap.** We provide the power and flexibility of an enterprise-grade experimentation platform without the overhead of building it yourself or the recurring costs of third-party solutions.
+Aurora is built with modern Go architecture, providing enterprise-grade experimentation capabilities with the simplicity of open source. It combines the power of sophisticated targeting rules with high-performance local caching to deliver sub-millisecond evaluation times.
 
 ### Why Aurora?
 
-- **🔓 Open Source**: Complete control over your experimentation infrastructure
-- **⚡ High Performance**: Built in Go for speed and efficiency
-- **🏗️ Modern Architecture**: Clean, maintainable codebase using industry best practices
-- **📊 Enterprise Ready**: Designed for scale with support for millions of evaluations
-- **🔌 Easy Integration**: Simple SDKs and REST APIs for seamless adoption
+**🔓 Open Source**: Complete control over your experimentation infrastructure without vendor lock-in
+**⚡ High Performance**: Built in Go for speed and efficiency, handling millions of evaluations per second
+**🏗️ Modern Architecture**: Clean, maintainable codebase using industry best practices
+**📊 Enterprise Ready**: Designed for scale with support for complex targeting and segmentation
+**🔌 Easy Integration**: Simple SDKs for seamless adoption across your stack
+
+## 🚀 Quick Start
+
+### Download and Start Aurora Server Locally
+
+Execute the following commands to start Aurora with all dependencies:
+
+```bash
+# Clone the repository
+git clone https://github.com/your-org/aurora.git
+cd aurora
+
+# Start PostgreSQL and run migrations
+make dev-setup
+
+# Start the Aurora API server
+make server
+```
+
+The Aurora API will be available at `http://localhost:9999`.
+
+### Use the SDK
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "log"
+    "time"
+    
+    "github.com/your-org/aurora/sdk"
+)
+
+func main() {
+    // Initialize Aurora SDK
+    client, err := sdk.NewClient(sdk.ClientOptions{
+        EndpointURL: "http://localhost:9999",
+    })
+    if err != nil {
+        log.Fatal(err)
+    }
+    
+    // Start the client
+    err = client.Start(context.Background())
+    if err != nil {
+        log.Fatal(err)
+    }
+    defer client.Stop()
+    
+    // Create user attributes
+    userAttrs := sdk.NewAttribute().
+        SetString("user_id", "user_12345").
+        SetString("country", "US")
+    
+    // Evaluate parameter
+    result := client.EvaluateParameter(
+        context.Background(),
+        "welcome_message",
+        userAttrs,
+    )
+    
+    message := result.AsString("Hello, World!")
+    fmt.Println(message) // Output: Hello, World!
+}
+```
+
+## 📖 Table of Contents
+
+- [Features](#-features)
+- [Getting Started](#-getting-started)
+- [SDK Usage](#-sdk-usage)
+- [License](#-license)
 
 ## ✨ Features
 
-### Core Capabilities
+Aurora provides comprehensive experimentation and feature management capabilities designed for modern applications.
 
-- **🚩 Feature Flags**: Advanced targeting, gradual rollouts, and kill switches
-- **🧪 A/B Testing**: Run experiments with sophisticated targeting rules
-- **🎯 Audience Segmentation**: Define user segments based on custom attributes
-- **📈 Dynamic Parameters**: Change feature configurations without deployments
-- **🔄 Real-time Updates**: SDK automatically fetches latest configurations
-- **💾 Local Caching**: Ultra-fast evaluations with BadgerDB-backed storage
-- **☁️ S3 Distribution**: Optional CDN-like configuration delivery via AWS S3
-- **🔗 API-First Design**: RESTful APIs for all platform operations
+### 🚩 Feature Flagging
 
-### Technical Features
+- **Advanced Targeting**: Target users based on custom attributes, segments, and complex conditions
+- **Gradual Rollouts**: Control feature exposure with percentage-based traffic allocation
+- **Kill Switches**: Instantly disable features across all environments
+- **Environment Management**: Separate configurations for development, staging, and production
+- **Type-Safe Evaluation**: Strong typing for parameters (string, number, boolean, JSON)
 
-- **🎲 Consistent Hashing**: Deterministic user bucketing with MurmurHash3
-- **🔐 Type-Safe Evaluation**: Strong typing for parameters (string, number, boolean, JSON)
-- **⚙️ Flexible Configuration**: YAML-based configuration with environment overrides
-- **📦 Zero Dependencies**: Standalone Go binaries, no external runtime required
-- **🔄 Background Sync**: Automatic configuration updates with configurable refresh rates
-- **🛡️ Error Handling**: Comprehensive error types with graceful fallbacks
+### 🧪 A/B Testing
 
-## 🏛️ Architecture
+- **Statistical Significance**: Built-in support for proper experiment design and analysis
+- **Consistent Hashing**: Deterministic user bucketing using MurmurHash3 algorithm
+- **Traffic Splitting**: Precise control over experiment traffic allocation
+- **Multi-Variant Testing**: Support for A/B/C and more complex experiment designs
+- **Experiment Lifecycle**: Schedule, run, and analyze experiments with proper controls
 
-Aurora follows a modern microservices architecture with clear separation of concerns:
+### 🎯 Audience Segmentation
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                     Client Application                       │
-│                                                              │
-│  ┌────────────────────────────────────────────────────┐    │
-│  │              Aurora SDK (Go)                       │    │
-│  │  • Local BadgerDB Cache                            │    │
-│  │  • Evaluation Engine                               │    │
-│  │  • Background Sync                                 │    │
-│  └────────────────────────────────────────────────────┘    │
-└───────────────────────┬──────────────────────────────────────┘
-                        │
-                        │ REST API / S3
-                        │
-┌───────────────────────▼──────────────────────────────────────┐
-│                     Aurora API Server                        │
-│                                                              │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐     │
-│  │   Gin HTTP   │  │  GORM ORM    │  │  River Jobs  │     │
-│  │   Router     │  │              │  │              │     │
-│  └──────────────┘  └──────────────┘  └──────────────┘     │
-│                                                              │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐     │
-│  │  Experiments │  │  Parameters  │  │  Segments    │     │
-│  │  Service     │  │  Service     │  │  Service     │     │
-│  └──────────────┘  └──────────────┘  └──────────────┘     │
-└───────────────────────┬──────────────────────────────────────┘
-                        │
-        ┌───────────────┼───────────────┐
-        │               │               │
-        ▼               ▼               ▼
-  ┌──────────┐   ┌──────────┐   ┌──────────┐
-  │PostgreSQL│   │  AWS S3  │   │  River   │
-  │          │   │  Bucket  │   │  Queue   │
-  └──────────┘   └──────────┘   └──────────┘
-```
+- **Dynamic Segments**: Create user segments based on real-time attributes
+- **Complex Conditions**: Support for AND/OR logic with multiple attribute conditions
+- **Attribute Types**: String, number, boolean, and enum attribute support
+- **Nested Targeting**: Combine segments with individual attribute targeting
+- **Real-time Updates**: Segment definitions update without code deployments
 
-### Components
+### ⚡ Performance & Reliability
 
-- **API Server**: Go-based REST API built with Gin framework
-- **SDK**: Lightweight Go client library with local caching
-- **Database**: PostgreSQL for persistence (experiments, parameters, segments)
-- **Cache**: BadgerDB for SDK-side caching
-- **Job Queue**: River for background task processing
-- **Storage**: Optional S3 for configuration distribution
+- **Local Caching**: Ultra-fast evaluations with BadgerDB-backed storage
+- **Background Sync**: Automatic configuration updates with configurable refresh rates
+- **Offline Support**: Graceful degradation when network is unavailable
+- **S3 Distribution**: Optional CDN-like configuration delivery via AWS S3
+- **Sub-millisecond Latency**: Optimized for high-throughput applications
+
+### 🔧 Developer Experience
+
+- **Simple SDK**: Lightweight Go client with intuitive API design
+- **Comprehensive Error Handling**: Detailed error types with graceful fallbacks
+- **Flexible Configuration**: YAML-based configuration with environment overrides
+- **Zero Dependencies**: Standalone Go binaries, no external runtime required
+- **Rich Logging**: Configurable logging levels with structured output
 
 ## 🎬 Getting Started
 
@@ -189,6 +208,8 @@ make migrate-create NAME=your_migration_name  # Create new migration
 
 ## 💻 SDK Usage
 
+The Aurora SDK provides a lightweight Go client library for evaluating feature flags and A/B test parameters. It features local caching, automatic configuration updates, and type-safe evaluation methods.
+
 ### Installation
 
 ```bash
@@ -253,6 +274,83 @@ func main() {
         message := result.AsString("Hello, World!")
         fmt.Println(message)
     }
+}
+```
+
+### Real-World Examples
+
+#### E-commerce Feature Flags
+
+```go
+// Check if new checkout flow is enabled for this user
+isNewCheckoutEnabled := client.EvaluateParameter(ctx, "new_checkout_enabled", userAttrs).
+    AsBool(false)
+
+if isNewCheckoutEnabled {
+    // Show new checkout UI
+    renderNewCheckout()
+} else {
+    // Show legacy checkout
+    renderLegacyCheckout()
+}
+
+// Get dynamic pricing multiplier
+pricingMultiplier := client.EvaluateParameter(ctx, "pricing_multiplier", userAttrs).
+    AsNumber(1.0)
+
+finalPrice := basePrice * pricingMultiplier
+```
+
+#### Content Personalization
+
+```go
+// Get personalized content based on user segment
+contentTheme := client.EvaluateParameter(ctx, "content_theme", userAttrs).
+    AsString("default")
+
+switch contentTheme {
+case "dark":
+    renderDarkTheme()
+case "minimal":
+    renderMinimalTheme()
+default:
+    renderDefaultTheme()
+}
+
+// Get user-specific feature configurations
+var featureConfig map[string]interface{}
+err := client.EvaluateParameter(ctx, "feature_config", userAttrs).
+    AsJSON(&featureConfig)
+
+if err == nil {
+    maxUploadSize := featureConfig["max_upload_size"].(float64)
+    enableNotifications := featureConfig["notifications"].(bool)
+}
+```
+
+#### A/B Testing Experiments
+
+```go
+// Run homepage redesign experiment
+homepageVersion := client.EvaluateParameter(ctx, "homepage_version", userAttrs).
+    AsString("control")
+
+switch homepageVersion {
+case "variant_a":
+    renderHomepageVariantA()
+case "variant_b":
+    renderHomepageVariantB()
+default:
+    renderHomepageControl()
+}
+
+// Track experiment exposure for analytics
+if homepageVersion != "control" {
+    analytics.Track("experiment_exposure", map[string]interface{}{
+        "experiment": "homepage_redesign",
+        "variant": homepageVersion,
+        "user_id": userAttrs.Get("user_id"),
+    })
 }
 ```
 
@@ -322,279 +420,9 @@ if result.HasError() {
 value := result.AsString("default_value")
 ```
 
-## ⚙️ Configuration
-
-Aurora uses YAML configuration files. Create a `config.yaml` in your project root:
-
-```yaml
-service:
-  name: aurora-api
-  env: production
-  port: 9999
-
-logging:
-  level: info  # debug, info, warn, error
-
-database:
-  host: localhost
-  port: 5432
-  user: postgres
-  password: your_secure_password
-  dbname: aurora_prod
-  sslmode: require
-  
-s3:
-  enable: true
-  bucketName: prod-aurora-experiments
-  accessKey: YOUR_AWS_ACCESS_KEY
-  secretKey: YOUR_AWS_SECRET_KEY
-```
-
-### Environment Variables
-
-You can override configuration values with environment variables:
-
-```bash
-export SERVICE_PORT=8080
-export DATABASE_HOST=prod-db.example.com
-export S3_ENABLE=false
-```
-
-## 🛠️ Development
-
-### Project Structure
-
-```
-aurora/
-├── api/                          # API Server
-│   ├── cmd/
-│   │   └── main.go              # Application entry point
-│   ├── config/                   # Configuration management
-│   ├── internal/
-│   │   ├── app/                 # Application utilities
-│   │   ├── constant/            # Constants
-│   │   ├── database/            # Database setup
-│   │   ├── dto/                 # Data Transfer Objects
-│   │   ├── fx/                  # Dependency injection (Uber FX)
-│   │   ├── handler/             # HTTP handlers
-│   │   ├── mapper/              # Data mappers
-│   │   ├── model/               # Database models
-│   │   ├── repository/          # Data access layer
-│   │   ├── router/              # HTTP routing
-│   │   ├── service/             # Business logic
-│   │   └── workers/             # Background jobs
-│   └── migrations/              # Database migrations
-│
-├── sdk/                          # Go SDK
-│   ├── client.go                # Main SDK client
-│   ├── engine.go                # Evaluation engine
-│   ├── storage.go               # BadgerDB storage
-│   ├── attribute.go             # User attributes
-│   ├── value.go                 # Evaluation results
-│   └── errors.go                # Error types
-│
-├── config.yaml                   # Configuration file
-├── docker-compose.yaml          # Docker setup
-├── Makefile                     # Development commands
-└── README.md                    # This file
-```
-
-### Available Make Commands
-
-```bash
-# Development
-make dev-setup      # Setup development environment
-make dev-start      # Start development server
-make dev-stop       # Stop development server
-make server         # Run API server
-
-# Database
-make migrate-up     # Apply migrations
-make migrate-down   # Rollback last migration
-make migrate-create NAME=migration_name  # Create new migration
-make db-connect     # Connect to PostgreSQL
-make db-reset       # Reset database
-
-# Docker
-make docker-up      # Start PostgreSQL
-make docker-down    # Stop PostgreSQL
-make docker-logs    # View PostgreSQL logs
-make docker-clean   # Clean Docker resources
-```
-
-### Running Tests
-
-```bash
-# Test SDK
-cd sdk
-go test -v ./...
-
-# Test API
-cd api
-go test -v ./...
-```
-
-### Creating a New Migration
-
-```bash
-make migrate-create NAME=add_new_feature
-
-# This creates two files:
-# api/migrations/{timestamp}_add_new_feature.up.sql
-# api/migrations/{timestamp}_add_new_feature.down.sql
-```
-
-## 📚 API Documentation
-
-### Endpoints
-
-#### SDK Endpoints
-
-```
-POST /api/v1/sdk/parameters
-POST /api/v1/sdk/experiments
-GET  /api/v1/sdk/metadata
-```
-
-#### Management Endpoints
-
-```
-# Experiments
-GET    /api/v1/experiments
-POST   /api/v1/experiments
-GET    /api/v1/experiments/:id
-PUT    /api/v1/experiments/:id
-DELETE /api/v1/experiments/:id
-
-# Parameters
-GET    /api/v1/parameters
-POST   /api/v1/parameters
-GET    /api/v1/parameters/:id
-PUT    /api/v1/parameters/:id
-DELETE /api/v1/parameters/:id
-
-# Segments
-GET    /api/v1/segments
-POST   /api/v1/segments
-GET    /api/v1/segments/:id
-PUT    /api/v1/segments/:id
-DELETE /api/v1/segments/:id
-
-# Attributes
-GET    /api/v1/attributes
-POST   /api/v1/attributes
-GET    /api/v1/attributes/:id
-PUT    /api/v1/attributes/:id
-DELETE /api/v1/attributes/:id
-```
-
-### Example API Requests
-
-#### Create an Experiment
-
-```bash
-curl -X POST http://localhost:9999/api/v1/experiments \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "Homepage Redesign",
-    "description": "Testing new homepage layout",
-    "status": "running",
-    "hashAttributeId": 1,
-    "variants": [
-      {
-        "name": "Control",
-        "trafficAllocation": 50,
-        "parameters": [
-          {
-            "parameterName": "hero_title",
-            "rolloutValue": "Welcome to our site"
-          }
-        ]
-      },
-      {
-        "name": "Variant A",
-        "trafficAllocation": 50,
-        "parameters": [
-          {
-            "parameterName": "hero_title",
-            "rolloutValue": "Discover amazing features"
-          }
-        ]
-      }
-    ]
-  }'
-```
-
-#### Create a Parameter
-
-```bash
-curl -X POST http://localhost:9999/api/v1/parameters \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "max_upload_size",
-    "dataType": "number",
-    "defaultValue": "10485760",
-    "description": "Maximum file upload size in bytes"
-  }'
-```
-
-## 🤝 Contributing
-
-We welcome contributions! Here's how you can help:
-
-1. **Fork the repository**
-2. **Create a feature branch**: `git checkout -b feature/amazing-feature`
-3. **Make your changes** and write tests
-4. **Run tests**: `go test ./...`
-5. **Commit your changes**: `git commit -m 'Add amazing feature'`
-6. **Push to the branch**: `git push origin feature/amazing-feature`
-7. **Open a Pull Request**
-
-### Development Guidelines
-
-- Follow Go best practices and conventions
-- Write tests for new features
-- Update documentation for API changes
-- Use meaningful commit messages
-- Keep pull requests focused and atomic
-
-### Code Style
-
-This project follows standard Go conventions:
-
-- Use `gofmt` for formatting
-- Follow effective Go guidelines
-- Write idiomatic Go code
-- Add comments for exported functions
-
-## 📋 Roadmap
-
-- [ ] Web UI for experiment management
-- [ ] Multi-language SDK support (JavaScript, Python, Ruby, Java)
-- [ ] Advanced analytics and reporting
-- [ ] Webhook support for real-time notifications
-- [ ] Feature flag scheduling
-- [ ] Gradual rollout controls
-- [ ] Multi-variate testing (MVT)
-- [ ] Integration with popular analytics platforms
-- [ ] Audit logs and change history
-- [ ] Role-based access control (RBAC)
-
-## 🔐 Security
-
-If you discover a security vulnerability, please email security@your-domain.com instead of opening a public issue.
-
 ## 📄 License
 
 Aurora is open source software licensed under the [MIT License](LICENSE).
-
-## 🙏 Acknowledgments
-
-Aurora draws inspiration from industry-leading platforms:
-
-- [GrowthBook](https://github.com/growthbook/growthbook) - Open source feature flagging and A/B testing
-- [Statsig](https://www.statsig.com/) - Modern experimentation platform
-- [LaunchDarkly](https://launchdarkly.com/) - Feature management platform
 
 ## 💬 Support
 
