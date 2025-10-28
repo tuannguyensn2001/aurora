@@ -152,6 +152,38 @@ func (r *repository) GetExperimentsActive(ctx context.Context) ([]model.Experime
 	return result, nil
 }
 
+// FindConflictingExperiments finds experiments that conflict with the given parameters
+// Conflicts occur when:
+// 1. Same parameter IDs are used
+// 2. Segments can have overlapping users (sophisticated segment analysis)
+// 3. Time periods overlap
+// 4. Status is schedule or running
+func (r *repository) FindConflictingExperiments(ctx context.Context, parameterIDs []int, segmentID int, startDate, endDate int64) ([]*model.Experiment, error) {
+	var experiments []*model.Experiment
+
+	// Build the query to find experiments with same parameters and overlapping time
+	// Time overlap logic: NOT (b < x OR y < a) = (b >= x AND y >= a)
+	// Where [a,b] is existing experiment time window and [x,y] is new experiment time window
+	query := r.db.WithContext(ctx).
+		Joins("JOIN experiment_variant_parameters evp ON experiments.id = evp.experiment_id").
+		Where("experiments.status IN (?)", []string{constant.ExperimentStatusSchedule, constant.ExperimentStatusRunning}).
+		Where("evp.parameter_id IN (?)", parameterIDs).
+		Where("experiments.end_date >= ? AND ? >= experiments.start_date", startDate, endDate)
+
+	// Load experiments with segment details for sophisticated overlap analysis
+	err := query.
+		Preload("Segment").
+		Preload("Segment.Rules").
+		Preload("Segment.Rules.Conditions").
+		Preload("Segment.Rules.Conditions.Attribute").
+		Preload("Variants").
+		Preload("Variants.Parameters").
+		Distinct("experiments.*").
+		Find(&experiments).Error
+
+	return experiments, err
+}
+
 // UpdateExperimentRawValue updates the raw_value field for an experiment after loading all related data
 func (r *repository) UpdateExperimentRawValue(ctx context.Context, id uint) error {
 	// Get the experiment with all related data loaded

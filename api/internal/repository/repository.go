@@ -94,6 +94,7 @@ type Repository interface {
 	GetExperimentByName(ctx context.Context, name string) (*model.Experiment, error)
 	GetExperimentsActive(ctx context.Context) ([]model.Experiment, error)
 	UpdateExperimentRawValue(ctx context.Context, id uint) error
+	FindConflictingExperiments(ctx context.Context, parameterIDs []int, segmentID int, startDate, endDate int64) ([]*model.Experiment, error)
 
 	// User operations
 	CreateUser(ctx context.Context, user *model.User) error
