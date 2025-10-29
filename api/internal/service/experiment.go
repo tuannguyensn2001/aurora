@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"sdk"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -101,34 +102,34 @@ func (s *service) CreateExperiment(ctx context.Context, req *dto.CreateExperimen
 	}
 
 	// Check for conflicting experiments with sophisticated segment analysis
-	// conflictingExperiments, err := s.repo.FindConflictingExperiments(ctx, parameterIDS, req.SegmentID, req.StartDate, req.EndDate)
-	// if err != nil {
-	// 	return "", fmt.Errorf("failed to check for conflicting experiments: %w", err)
-	// }
+	conflictingExperiments, err := s.repo.FindConflictingExperiments(ctx, parameterIDS, req.SegmentID, req.StartDate, req.EndDate)
+	if err != nil {
+		return "", fmt.Errorf("failed to check for conflicting experiments: %w", err)
+	}
 
-	// // Filter experiments based on sophisticated segment overlap analysis
-	// var actualConflicts []*model.Experiment
-	// for _, exp := range conflictingExperiments {
-	// 	hasOverlap, err := s.checkSegmentOverlap(ctx, req.SegmentID, exp.SegmentID)
-	// 	if err != nil {
-	// 		return "", fmt.Errorf("failed to check segment overlap: %w", err)
-	// 	}
-	// 	if hasOverlap {
-	// 		actualConflicts = append(actualConflicts, exp)
-	// 	}
-	// }
+	// Filter experiments based on sophisticated segment overlap analysis
+	var actualConflicts []*model.Experiment
+	for _, exp := range conflictingExperiments {
+		hasOverlap, err := s.checkSegmentOverlap(ctx, req.SegmentID, exp.SegmentID)
+		if err != nil {
+			return "", fmt.Errorf("failed to check segment overlap: %w", err)
+		}
+		if hasOverlap {
+			actualConflicts = append(actualConflicts, exp)
+		}
+	}
 
-	// if len(actualConflicts) > 0 {
-	// 	// Build detailed conflict message
-	// 	var conflictDetails []string
-	// 	for _, exp := range actualConflicts {
-	// 		conflictDetails = append(conflictDetails, fmt.Sprintf("Experiment '%s' (ID: %d, Status: %s, Segment: %d, Period: %d-%d)",
-	// 			exp.Name, exp.ID, exp.Status, exp.SegmentID, exp.StartDate, exp.EndDate))
-	// 	}
+	if len(actualConflicts) > 0 {
+		// Build detailed conflict message
+		var conflictDetails []string
+		for _, exp := range actualConflicts {
+			conflictDetails = append(conflictDetails, fmt.Sprintf("Experiment '%s' (ID: %d, Status: %s, Segment: %d, Period: %d-%d)",
+				exp.Name, exp.ID, exp.Status, exp.SegmentID, exp.StartDate, exp.EndDate))
+		}
 
-	// 	return "", fmt.Errorf("experiment conflicts detected with %d existing experiment(s): [%s]",
-	// 		len(actualConflicts), strings.Join(conflictDetails, ", "))
-	// }
+		return "", fmt.Errorf("experiment conflicts detected with %d existing experiment(s): [%s]",
+			len(actualConflicts), strings.Join(conflictDetails, ", "))
+	}
 
 	// Start a transaction
 	tx := s.repo.GetDB().Begin()
@@ -440,89 +441,10 @@ func (s *service) checkSegmentOverlap(ctx context.Context, segmentID1, segmentID
 		return false, fmt.Errorf("failed to load segment %d: %w", segmentID2, err)
 	}
 
-	// Analyze if the segments can have overlapping users
-	return s.analyzeSegmentConditionsOverlap(segment1, segment2), nil
-}
-
-// analyzeSegmentConditionsOverlap analyzes if two segments' conditions can overlap
-func (s *service) analyzeSegmentConditionsOverlap(segment1, segment2 *model.Segment) bool {
-	// If either segment has no rules, it matches all users
-	if len(segment1.Rules) == 0 || len(segment2.Rules) == 0 {
-		return true
+	res, err := s.solver.CheckSegmentsConflict([]model.Segment{*segment1, *segment2})
+	if err != nil {
+		return false, fmt.Errorf("failed to check segments conflict: %w", err)
 	}
 
-	// For each rule in segment1, check if it can overlap with any rule in segment2
-	for _, rule1 := range segment1.Rules {
-		for _, rule2 := range segment2.Rules {
-			if s.canRulesOverlap(rule1, rule2) {
-				return true
-			}
-		}
-	}
-
-	return false
-}
-
-// canRulesOverlap determines if two segment rules can have overlapping users
-func (s *service) canRulesOverlap(rule1, rule2 model.SegmentRule) bool {
-	// If either rule has no conditions, it matches all users
-	if len(rule1.Conditions) == 0 || len(rule2.Conditions) == 0 {
-		return true
-	}
-
-	// Group conditions by attribute for easier comparison
-	conditions1 := make(map[uint][]model.SegmentRuleCondition)
-	conditions2 := make(map[uint][]model.SegmentRuleCondition)
-
-	for _, cond := range rule1.Conditions {
-		conditions1[cond.AttributeID] = append(conditions1[cond.AttributeID], cond)
-	}
-
-	for _, cond := range rule2.Conditions {
-		conditions2[cond.AttributeID] = append(conditions2[cond.AttributeID], cond)
-	}
-
-	// Check if there's any attribute where conditions CONFLICT (can't both be true)
-	for attrID, conds1 := range conditions1 {
-		if conds2, exists := conditions2[attrID]; exists {
-			if s.doAttributeConditionsConflict(conds1, conds2) {
-				return false // Conflicting conditions = no overlap
-			}
-		}
-	}
-
-	// If no conflicting conditions, rules can overlap
-	return true
-}
-
-// doAttributeConditionsConflict determines if conditions on the same attribute conflict
-func (s *service) doAttributeConditionsConflict(conds1, conds2 []model.SegmentRuleCondition) bool {
-	// For each condition in rule1, check if it conflicts with any condition in rule2
-	for _, cond1 := range conds1 {
-		for _, cond2 := range conds2 {
-			if s.doConditionsConflict(cond1, cond2) {
-				return true // Found conflicting conditions
-			}
-		}
-	}
-	return false // No conflicts found
-}
-
-// doConditionsConflict determines if two conditions conflict (can't both be true)
-func (s *service) doConditionsConflict(cond1, cond2 model.SegmentRuleCondition) bool {
-	// Two conditions conflict if they have the same attribute but different values
-	// and at least one uses equals operator
-	if cond1.AttributeID != cond2.AttributeID {
-		return false // Different attributes don't conflict
-	}
-
-	// Same attribute, check for conflicts
-	if cond1.Value != cond2.Value {
-		// Different values - check if at least one is equals
-		if cond1.Operator == model.ConditionOperatorEquals || cond2.Operator == model.ConditionOperatorEquals {
-			return true // country=vn conflicts with country=sg
-		}
-	}
-
-	return false // No conflict
+	return !res.Valid, nil
 }

@@ -21,6 +21,7 @@ func NewApp(configPath string) *fx.App {
 		// Include all modules
 		S3Module,
 		ConfigModule,
+		SolverModule,
 		LoggerModule,
 		DatabaseModule,
 		RepositoryModule,

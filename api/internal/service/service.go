@@ -3,6 +3,7 @@ package service
 import (
 	"api/config"
 	"api/internal/dto"
+	"api/internal/external/solver"
 	"api/internal/model"
 	"api/internal/repository"
 	"context"
@@ -83,13 +84,15 @@ type service struct {
 	repo         repository.Repository
 	riverClient  *river.Client[pgx.Tx]
 	auroraClient sdk.Client
+	solver       solver.Solver
 }
 
 // New creates a new service
-func New(repo repository.Repository, riverClient *river.Client[pgx.Tx], auroraClient sdk.Client) Service {
+func New(repo repository.Repository, riverClient *river.Client[pgx.Tx], auroraClient sdk.Client, solver solver.Solver) Service {
 	return &service{
 		repo:         repo,
 		riverClient:  riverClient,
 		auroraClient: auroraClient,
+		solver:       solver,
 	}
 }

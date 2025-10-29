@@ -1,6 +1,7 @@
 package fx
 
 import (
+	"api/internal/external/solver"
 	"api/internal/repository"
 	"api/internal/service"
 	"sdk"
@@ -16,11 +17,12 @@ type ServiceParams struct {
 	Repository   repository.Repository
 	RiverClient  *river.Client[pgx.Tx]
 	AuroraClient sdk.Client
+	Solver       solver.Solver
 }
 
 // ProvideService provides the service instance
 func ProvideService(params ServiceParams) service.Service {
-	return service.New(params.Repository, params.RiverClient, params.AuroraClient)
+	return service.New(params.Repository, params.RiverClient, params.AuroraClient, params.Solver)
 }
 
 // ServiceModule provides the service module

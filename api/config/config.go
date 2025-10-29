@@ -38,6 +38,9 @@ type Config struct {
 		Secret     string `yaml:"secret"`
 		ExpireHour int    `yaml:"expireHour"`
 	} `yaml:"jwt"`
+	Solver struct {
+		EndpointURL string `yaml:"endpointUrl"`
+	} `yaml:"solver"`
 }
 
 func Load(configPath string) (*Config, error) {
