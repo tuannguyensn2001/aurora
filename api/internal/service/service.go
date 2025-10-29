@@ -33,6 +33,7 @@ type Service interface {
 	GetAllSegments(ctx context.Context) ([]*model.Segment, error)
 	UpdateSegment(ctx context.Context, id uint, req *dto.UpdateSegmentRequest) (*model.Segment, error)
 	DeleteSegment(ctx context.Context, id uint) error
+	CheckSegmentOverlap(ctx context.Context, segmentIDs []uint) (bool, error)
 
 	// Parameter operations
 	CreateParameter(ctx context.Context, req *dto.CreateParameterRequest) (*model.Parameter, error)

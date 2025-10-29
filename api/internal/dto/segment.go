@@ -142,3 +142,13 @@ func ToSegmentListResponse(segments []*model.Segment) SegmentListResponse {
 		Segments: responses,
 	}
 }
+
+// CheckSegmentOverlapRequest represents the request to check segment overlap
+type CheckSegmentOverlapRequest struct {
+	SegmentIDs []uint `json:"segmentIds" validate:"required,min=2"`
+}
+
+// CheckSegmentOverlapResponse represents the response for segment overlap check
+type CheckSegmentOverlapResponse struct {
+	Overlap bool `json:"overlap"`
+}

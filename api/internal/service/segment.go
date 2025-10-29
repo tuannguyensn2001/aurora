@@ -177,3 +177,17 @@ func (s *service) DeleteSegment(ctx context.Context, id uint) error {
 
 	return s.repo.DeleteSegment(ctx, segment.ID)
 }
+
+// CheckSegmentOverlap checks if any segments in the provided list overlap with each other
+func (s *service) CheckSegmentOverlap(ctx context.Context, segmentIDs []uint) (bool, error) {
+	if len(segmentIDs) != 2 {
+		return false, fmt.Errorf("at least 2 segment IDs are required")
+	}
+
+	// Check all pairs of segments for overlap
+	hasOverlap, err := s.checkSegmentOverlap(ctx, int(segmentIDs[0]), int(segmentIDs[1]))
+	if err != nil {
+		return false, fmt.Errorf("failed to check overlap between segments %d and %d: %w", segmentIDs[0], segmentIDs[1], err)
+	}
+	return hasOverlap, nil
+}

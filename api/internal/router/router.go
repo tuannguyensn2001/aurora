@@ -93,6 +93,7 @@ func (r *Router) SetupRoutes(engine *gin.Engine) {
 				segments.GET("/:id", r.getSegmentByID)
 				segments.PATCH("/:id", r.updateSegment)
 				segments.DELETE("/:id", r.deleteSegment)
+				segments.POST("/check-overlap", r.checkSegmentOverlap)
 			}
 
 			// Parameter routes
@@ -407,6 +408,22 @@ func (r *Router) deleteSegment(c *gin.Context) {
 	}
 
 	c.Status(http.StatusNoContent)
+}
+
+func (r *Router) checkSegmentOverlap(c *gin.Context) {
+	var req dto.CheckSegmentOverlapRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.Error(err)
+		return
+	}
+
+	result, err := r.handler.CheckSegmentOverlap(c.Request.Context(), &req)
+	if err != nil {
+		c.Error(err)
+		return
+	}
+
+	c.JSON(http.StatusOK, result)
 }
 
 // Parameter handlers

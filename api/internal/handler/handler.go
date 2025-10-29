@@ -212,6 +212,22 @@ func (h *Handler) DeleteSegment(ctx context.Context, id uint) error {
 	return nil
 }
 
+// CheckSegmentOverlap handles the business logic for checking segment overlap
+func (h *Handler) CheckSegmentOverlap(ctx context.Context, req *dto.CheckSegmentOverlapRequest) (*dto.CheckSegmentOverlapResponse, error) {
+	logger := log.Ctx(ctx).With().Str("handler", "check-segment-overlap").Logger()
+	logger.Info().Msg("Checking segment overlap")
+
+	overlap, err := h.service.CheckSegmentOverlap(ctx, req.SegmentIDs)
+	if err != nil {
+		logger.Error().Err(err).Msg("Failed to check segment overlap")
+		return nil, err
+	}
+
+	return &dto.CheckSegmentOverlapResponse{
+		Overlap: overlap,
+	}, nil
+}
+
 // CreateParameter handles the business logic for creating a parameter
 func (h *Handler) CreateParameter(ctx context.Context, req *dto.CreateParameterRequest) (*dto.ParameterResponse, error) {
 	logger := log.Ctx(ctx).With().Str("handler", "create-parameter").Logger()
