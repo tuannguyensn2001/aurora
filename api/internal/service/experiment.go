@@ -17,6 +17,11 @@ import (
 	"gorm.io/gorm"
 )
 
+// contextKey is a type for context keys to avoid collisions
+type contextKey string
+
+const txContextKey contextKey = "tx"
+
 // CreateExperiment creates a new experiment with its variants and parameters
 func (s *service) CreateExperiment(ctx context.Context, req *dto.CreateExperimentRequest) (string, error) {
 
@@ -29,6 +34,7 @@ func (s *service) CreateExperiment(ctx context.Context, req *dto.CreateExperimen
 		return "", err
 	}
 
+	// Collect unique parameter IDs
 	parameterIDSSet := make(map[int]bool)
 	for _, variant := range req.Variants {
 		for _, parameter := range variant.Parameters {
@@ -36,7 +42,7 @@ func (s *service) CreateExperiment(ctx context.Context, req *dto.CreateExperimen
 		}
 	}
 
-	parameterIDS := make([]int, 0)
+	parameterIDS := make([]int, 0, len(parameterIDSSet))
 	for parameterID := range parameterIDSSet {
 		parameterIDS = append(parameterIDS, parameterID)
 	}
@@ -67,12 +73,8 @@ func (s *service) CreateExperiment(ctx context.Context, req *dto.CreateExperimen
 			if verifiedParameter.Name != parameter.ParameterName {
 				return "", fmt.Errorf("parameter %d has invalid name", parameter.ParameterID)
 			}
-			if verifiedParameter.DataType == model.ParameterDataTypeString {
-				if parameter.RolloutValue == "" {
-					return "", fmt.Errorf("parameter %d has invalid rollout value", parameter.ParameterID)
-				}
-			}
-			if verifiedParameter.DataType == model.ParameterDataTypeNumber {
+			// Validate rollout value based on data type
+			if verifiedParameter.DataType == model.ParameterDataTypeString || verifiedParameter.DataType == model.ParameterDataTypeNumber {
 				if parameter.RolloutValue == "" {
 					return "", fmt.Errorf("parameter %d has invalid rollout value", parameter.ParameterID)
 				}
@@ -141,6 +143,7 @@ func (s *service) CreateExperiment(ctx context.Context, req *dto.CreateExperimen
 	defer func() {
 		if r := recover(); r != nil {
 			tx.Rollback()
+			panic(r)
 		}
 	}()
 
@@ -163,7 +166,7 @@ func (s *service) CreateExperiment(ctx context.Context, req *dto.CreateExperimen
 	}
 
 	// Use transaction context
-	txCtx := context.WithValue(ctx, "tx", tx)
+	txCtx := context.WithValue(ctx, txContextKey, tx)
 	if err := s.repo.CreateExperiment(txCtx, experiment); err != nil {
 		tx.Rollback()
 		return "", fmt.Errorf("failed to create experiment: %w", err)
@@ -249,34 +252,8 @@ func (s *service) GetExperimentByID(ctx context.Context, id uint) (*model.Experi
 	}
 
 	// Update experiment status based on dates
-	if experiment.Status == constant.ExperimentStatusSchedule {
-		if experiment.StartDate < time.Now().Unix() {
-			experiment.Status = constant.ExperimentStatusRunning
-			experiment.UpdatedAt = time.Now().Unix()
-			err = s.repo.UpdateExperiment(ctx, experiment)
-			if err != nil {
-				return nil, nil, nil, nil, fmt.Errorf("failed to update experiment: %w", err)
-			}
-			// Update raw_value field with all related data
-			if err := s.repo.UpdateExperimentRawValue(ctx, uint(experiment.ID)); err != nil {
-				// Log error but don't fail the get operation
-				log.Ctx(ctx).Error().Err(err).Int("experimentId", experiment.ID).Msg("Failed to update experiment raw_value")
-			}
-		}
-	} else if experiment.Status == constant.ExperimentStatusRunning {
-		if experiment.EndDate < time.Now().Unix() {
-			experiment.Status = constant.ExperimentStatusFinish
-			experiment.UpdatedAt = time.Now().Unix()
-			err = s.repo.UpdateExperiment(ctx, experiment)
-			if err != nil {
-				return nil, nil, nil, nil, fmt.Errorf("failed to update experiment: %w", err)
-			}
-			// Update raw_value field with all related data
-			if err := s.repo.UpdateExperimentRawValue(ctx, uint(experiment.ID)); err != nil {
-				// Log error but don't fail the get operation
-				log.Ctx(ctx).Error().Err(err).Int("experimentId", experiment.ID).Msg("Failed to update experiment raw_value")
-			}
-		}
+	if err := s.updateExperimentStatusIfNeeded(ctx, experiment); err != nil {
+		return nil, nil, nil, nil, err
 	}
 
 	return experiment, variants, variantParametersMap, experiment.HashAttribute, nil
@@ -299,16 +276,9 @@ func (s *service) RejectExperiment(ctx context.Context, id uint, req *dto.Reject
 	experiment.Status = constant.ExperimentStatusCancel
 	experiment.UpdatedAt = time.Now().Unix()
 
-	// Save the updated experiment
-	err = s.repo.UpdateExperiment(ctx, experiment)
-	if err != nil {
-		return nil, fmt.Errorf("failed to update experiment: %w", err)
-	}
-
-	// Update raw_value field with all related data
-	if err := s.repo.UpdateExperimentRawValue(ctx, uint(experiment.ID)); err != nil {
-		// Log error but don't fail the update
-		log.Ctx(ctx).Error().Err(err).Int("experimentId", experiment.ID).Msg("Failed to update experiment raw_value")
+	// Save the updated experiment and update raw_value
+	if err := s.updateExperimentAndRawValue(ctx, experiment); err != nil {
+		return nil, err
 	}
 
 	s.riverClient.Insert(ctx, dto.SyncExperimentArgs{}, nil)
@@ -332,16 +302,9 @@ func (s *service) ApproveExperiment(ctx context.Context, id uint, req *dto.Appro
 	experiment.Status = constant.ExperimentStatusSchedule
 	experiment.UpdatedAt = time.Now().Unix()
 
-	// Save the updated experiment
-	err = s.repo.UpdateExperiment(ctx, experiment)
-	if err != nil {
-		return nil, fmt.Errorf("failed to update experiment: %w", err)
-	}
-
-	// Update raw_value field with all related data
-	if err := s.repo.UpdateExperimentRawValue(ctx, uint(experiment.ID)); err != nil {
-		// Log error but don't fail the update
-		log.Ctx(ctx).Error().Err(err).Int("experimentId", experiment.ID).Msg("Failed to update experiment raw_value")
+	// Save the updated experiment and update raw_value
+	if err := s.updateExperimentAndRawValue(ctx, experiment); err != nil {
+		return nil, err
 	}
 
 	s.riverClient.Insert(ctx, dto.SyncExperimentArgs{}, nil)
@@ -357,23 +320,7 @@ func (s *service) AbortExperiment(ctx context.Context, id uint, req *dto.AbortEx
 		return nil, fmt.Errorf("failed to get experiment: %w", err)
 	}
 
-	// Check if experiment can be aborted (business logic based on ExperimentStatus enum)
-	// if experiment.Status == constant.ExperimentStatusCancel {
-	// 	return nil, fmt.Errorf("cannot abort a canceled experiment")
-	// }
-
-	// if experiment.Status == constant.ExperimentStatusAbort {
-	// 	return nil, fmt.Errorf("experiment is already aborted")
-	// }
-
-	// if experiment.Status == constant.ExperimentStatusFinish {
-	// 	return nil, fmt.Errorf("cannot abort a finished experiment")
-	// }
-
-	// if experiment.Status == constant.ExperimentStatusDraft {
-	// 	return nil, fmt.Errorf("cannot abort a draft experiment, reject it instead")
-	// }
-
+	// Check if experiment can be aborted (only scheduled or running experiments can be aborted)
 	if experiment.Status != constant.ExperimentStatusSchedule && experiment.Status != constant.ExperimentStatusRunning {
 		return nil, fmt.Errorf("experiment is not in schedule status")
 	}
@@ -382,16 +329,9 @@ func (s *service) AbortExperiment(ctx context.Context, id uint, req *dto.AbortEx
 	experiment.Status = constant.ExperimentStatusAbort
 	experiment.UpdatedAt = time.Now().Unix()
 
-	// Save the updated experiment
-	err = s.repo.UpdateExperiment(ctx, experiment)
-	if err != nil {
-		return nil, fmt.Errorf("failed to update experiment: %w", err)
-	}
-
-	// Update raw_value field with all related data
-	if err := s.repo.UpdateExperimentRawValue(ctx, uint(experiment.ID)); err != nil {
-		// Log error but don't fail the update
-		log.Ctx(ctx).Error().Err(err).Int("experimentId", experiment.ID).Msg("Failed to update experiment raw_value")
+	// Save the updated experiment and update raw_value
+	if err := s.updateExperimentAndRawValue(ctx, experiment); err != nil {
+		return nil, err
 	}
 
 	s.riverClient.Insert(ctx, dto.SyncExperimentArgs{}, nil)
@@ -447,4 +387,48 @@ func (s *service) checkSegmentOverlap(ctx context.Context, segmentID1, segmentID
 	}
 
 	return !res.Valid, nil
+}
+
+// updateExperimentStatusIfNeeded updates the experiment status based on current date
+// and updates the raw_value field accordingly
+func (s *service) updateExperimentStatusIfNeeded(ctx context.Context, experiment *model.Experiment) error {
+	now := time.Now().Unix()
+	var newStatus string
+
+	if experiment.Status == constant.ExperimentStatusSchedule && experiment.StartDate < now {
+		newStatus = constant.ExperimentStatusRunning
+	} else if experiment.Status == constant.ExperimentStatusRunning && experiment.EndDate < now {
+		newStatus = constant.ExperimentStatusFinish
+	} else {
+		return nil
+	}
+
+	experiment.Status = newStatus
+	experiment.UpdatedAt = now
+
+	if err := s.repo.UpdateExperiment(ctx, experiment); err != nil {
+		return fmt.Errorf("failed to update experiment: %w", err)
+	}
+
+	// Update raw_value field - log error but don't fail the operation
+	if err := s.repo.UpdateExperimentRawValue(ctx, uint(experiment.ID)); err != nil {
+		log.Ctx(ctx).Error().Err(err).Int("experimentId", experiment.ID).Msg("Failed to update experiment raw_value")
+	}
+
+	return nil
+}
+
+// updateExperimentAndRawValue updates the experiment and its raw_value field
+// It logs errors for raw_value updates but doesn't fail the operation
+func (s *service) updateExperimentAndRawValue(ctx context.Context, experiment *model.Experiment) error {
+	if err := s.repo.UpdateExperiment(ctx, experiment); err != nil {
+		return fmt.Errorf("failed to update experiment: %w", err)
+	}
+
+	// Update raw_value field - log error but don't fail the update
+	if err := s.repo.UpdateExperimentRawValue(ctx, uint(experiment.ID)); err != nil {
+		log.Ctx(ctx).Error().Err(err).Int("experimentId", experiment.ID).Msg("Failed to update experiment raw_value")
+	}
+
+	return nil
 }
