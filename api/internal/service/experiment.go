@@ -298,6 +298,43 @@ func (s *service) ApproveExperiment(ctx context.Context, id uint, req *dto.Appro
 		return nil, fmt.Errorf("experiment is not in draft status")
 	}
 
+	// Extract parameter IDs from experiment variants
+	parameterIDS := s.extractParameterIDsFromExperiment(experiment)
+
+	// Check for conflicting experiments with sophisticated segment analysis
+	conflictingExperiments, err := s.repo.FindConflictingExperiments(ctx, parameterIDS, experiment.SegmentID, experiment.StartDate, experiment.EndDate)
+	if err != nil {
+		return nil, fmt.Errorf("failed to check for conflicting experiments: %w", err)
+	}
+
+	// Filter experiments based on sophisticated segment overlap analysis and exclude current experiment
+	var actualConflicts []*model.Experiment
+	for _, exp := range conflictingExperiments {
+		// Exclude the current experiment from conflict check
+		if exp.ID == experiment.ID {
+			continue
+		}
+		hasOverlap, err := s.checkSegmentOverlap(ctx, experiment.SegmentID, exp.SegmentID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to check segment overlap: %w", err)
+		}
+		if hasOverlap {
+			actualConflicts = append(actualConflicts, exp)
+		}
+	}
+
+	if len(actualConflicts) > 0 {
+		// Build detailed conflict message
+		var conflictDetails []string
+		for _, exp := range actualConflicts {
+			conflictDetails = append(conflictDetails, fmt.Sprintf("Experiment '%s' (ID: %d, Status: %s, Segment: %d, Period: %d-%d)",
+				exp.Name, exp.ID, exp.Status, exp.SegmentID, exp.StartDate, exp.EndDate))
+		}
+
+		return nil, fmt.Errorf("experiment conflicts detected with %d existing experiment(s): [%s]",
+			len(actualConflicts), strings.Join(conflictDetails, ", "))
+	}
+
 	// Update the experiment status to approved
 	experiment.Status = constant.ExperimentStatusSchedule
 	experiment.UpdatedAt = time.Now().Unix()
@@ -431,4 +468,21 @@ func (s *service) updateExperimentAndRawValue(ctx context.Context, experiment *m
 	}
 
 	return nil
+}
+
+// extractParameterIDsFromExperiment extracts unique parameter IDs from an experiment's variants
+func (s *service) extractParameterIDsFromExperiment(experiment *model.Experiment) []int {
+	parameterIDSSet := make(map[int]bool)
+	for _, variant := range experiment.Variants {
+		for _, parameter := range variant.Parameters {
+			parameterIDSSet[parameter.ParameterID] = true
+		}
+	}
+
+	parameterIDS := make([]int, 0, len(parameterIDSSet))
+	for parameterID := range parameterIDSSet {
+		parameterIDS = append(parameterIDS, parameterID)
+	}
+
+	return parameterIDS
 }
