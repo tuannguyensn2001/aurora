@@ -30,6 +30,22 @@ func (r *EventRepository) CreateEvent(ctx context.Context, event *model.Evaluati
 	return r.db.WithContext(ctx).Create(event).Error
 }
 
+// CreateEventsBatch creates multiple evaluation events in a single transaction
+func (r *EventRepository) CreateEventsBatch(ctx context.Context, events []*model.EvaluationEvent) error {
+	if len(events) == 0 {
+		return nil
+	}
+
+	// Ensure all events have valid user attributes
+	for _, event := range events {
+		if event.UserAttributes == "" {
+			event.UserAttributes = "{}"
+		}
+	}
+
+	return r.db.WithContext(ctx).CreateInBatches(events, 100).Error
+}
+
 // GetEventsByServiceName retrieves events for a specific service
 func (r *EventRepository) GetEventsByServiceName(ctx context.Context, serviceName string, limit, offset int) ([]model.EvaluationEvent, error) {
 	var events []model.EvaluationEvent

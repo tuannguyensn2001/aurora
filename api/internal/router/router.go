@@ -706,8 +706,22 @@ func (r *Router) getAllExperimentsSDK(c *gin.Context) {
 	c.JSON(http.StatusOK, result)
 }
 
-// SDK event tracking handler
+// SDK event tracking handler - supports both single event and batch events
 func (r *Router) trackEvent(c *gin.Context) {
+	// Try to parse as batch first
+	var batchReq dto.TrackBatchEventRequest
+	if err := c.ShouldBindJSON(&batchReq); err == nil && len(batchReq.Events) > 0 {
+		// It's a batch request
+		result, err := r.handler.TrackBatchEvent(c.Request.Context(), &batchReq)
+		if err != nil {
+			c.Error(err)
+			return
+		}
+		c.JSON(http.StatusOK, result)
+		return
+	}
+
+	// Try to parse as single event
 	var req dto.TrackEventRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.Error(err)

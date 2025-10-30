@@ -41,6 +41,13 @@ type Config struct {
 	Solver struct {
 		EndpointURL string `yaml:"endpointUrl"`
 	} `yaml:"solver"`
+	EventBatch struct {
+		MaxSize     int `yaml:"maxSize"`     // Maximum number of events per batch
+		MaxBytes    int `yaml:"maxBytes"`    // Maximum bytes per batch
+		MaxWaitTime int `yaml:"maxWaitTime"` // Maximum wait time in seconds before processing batch
+		FlushSize   int `yaml:"flushSize"`   // Size at which to flush batch immediately
+		FlushBytes  int `yaml:"flushBytes"`  // Bytes at which to flush batch immediately
+	} `yaml:"eventBatch"`
 }
 
 func Load(configPath string) (*Config, error) {

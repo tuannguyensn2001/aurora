@@ -39,35 +39,123 @@ type EventTracker struct {
 	endpointURL string
 	serviceName string
 	logger      *slog.Logger
+	batchConfig BatchConfig
+	eventBatch  []EvaluationEvent
+	lastFlush   time.Time
+	flushTimer  *time.Timer
+	flushChan   chan struct{}
 }
 
 // NewEventTracker creates a new event tracker
-func NewEventTracker(endpointURL, serviceName string, logger *slog.Logger) *EventTracker {
-	return &EventTracker{
+func NewEventTracker(endpointURL, serviceName string, logger *slog.Logger, batchConfig BatchConfig) *EventTracker {
+	et := &EventTracker{
 		endpointURL: endpointURL,
 		serviceName: serviceName,
 		logger:      logger,
+		batchConfig: batchConfig,
+		eventBatch:  make([]EvaluationEvent, 0, batchConfig.MaxSize),
+		flushChan:   make(chan struct{}, 1),
+	}
+
+	// Start the flush timer
+	et.startFlushTimer()
+
+	return et
+}
+
+// TrackEvent adds an event to the batch and flushes if necessary
+func (et *EventTracker) TrackEvent(ctx context.Context, event *EvaluationEvent) {
+	// Add event to batch
+	et.eventBatch = append(et.eventBatch, *event)
+
+	// Check if we should flush immediately
+	if et.shouldFlush() {
+		et.flushEvents(ctx)
 	}
 }
 
-// TrackEvent sends an event to the server
-func (et *EventTracker) TrackEvent(ctx context.Context, event *EvaluationEvent) {
-	// Send event asynchronously to avoid blocking the main evaluation flow
-	// go func() {
+// shouldFlush determines if the batch should be flushed
+func (et *EventTracker) shouldFlush() bool {
+	// Check size limits
+	if len(et.eventBatch) >= et.batchConfig.FlushSize || len(et.eventBatch) >= et.batchConfig.MaxSize {
+		return true
+	}
+
+	// Check byte limits
+	if et.getBatchSizeBytes() >= et.batchConfig.FlushBytes || et.getBatchSizeBytes() >= et.batchConfig.MaxBytes {
+		return true
+	}
+
+	return false
+}
+
+// getBatchSizeBytes calculates the approximate size of the current batch in bytes
+func (et *EventTracker) getBatchSizeBytes() int {
+	// Simple approximation - in production, you might want to be more precise
+	return len(et.eventBatch) * 200 // Approximate 200 bytes per event
+}
+
+// startFlushTimer starts the timer for periodic flushing
+func (et *EventTracker) startFlushTimer() {
+	et.flushTimer = time.AfterFunc(et.batchConfig.MaxWaitTime, func() {
+		select {
+		case et.flushChan <- struct{}{}:
+		default:
+		}
+	})
+}
+
+// flushEvents sends the current batch to the server
+func (et *EventTracker) flushEvents(ctx context.Context) {
+	if len(et.eventBatch) == 0 {
+		return
+	}
+
+	// Create batch request
+	batchReq := BatchEventRequest{
+		Events: make([]EvaluationEvent, len(et.eventBatch)),
+	}
+	copy(batchReq.Events, et.eventBatch)
+
+	// Send batch to server
 	client := resty.New()
 	defer client.Close()
 
+	var response BatchEventResponse
 	_, err := client.R().
 		SetContext(ctx).
-		SetBody(event).
+		SetBody(batchReq).
+		SetResult(&response).
 		Post(et.endpointURL + "/api/v1/sdk/events")
 
 	if err != nil {
-		et.logger.ErrorContext(ctx, "failed to track event", "error", err, "event", event)
+		et.logger.ErrorContext(ctx, "failed to track batch events", "error", err, "batchSize", len(et.eventBatch))
 	} else {
-		et.logger.DebugContext(ctx, "event tracked successfully", "event", event)
+		et.logger.DebugContext(ctx, "batch events tracked successfully",
+			"processed", response.Processed,
+			"failed", response.Failed,
+			"batchSize", len(et.eventBatch))
 	}
-	// }()
+
+	// Clear the batch
+	et.eventBatch = et.eventBatch[:0]
+	et.lastFlush = time.Now()
+
+	// Reset the timer
+	et.flushTimer.Reset(et.batchConfig.MaxWaitTime)
+}
+
+// FlushPendingEvents flushes any pending events in the batch
+func (et *EventTracker) FlushPendingEvents(ctx context.Context) {
+	et.flushEvents(ctx)
+}
+
+// Stop stops the event tracker and flushes any pending events
+func (et *EventTracker) Stop(ctx context.Context) {
+	if et.flushTimer != nil {
+		et.flushTimer.Stop()
+	}
+	et.FlushPendingEvents(ctx)
 }
 
 // CreateParameterEvaluationEvent creates an event for parameter evaluation
@@ -128,6 +216,20 @@ func (et *EventTracker) CreateExperimentEvaluationEvent(
 	}
 
 	return event
+}
+
+// BatchEventRequest represents a batch of events to be sent to the server
+type BatchEventRequest struct {
+	Events []EvaluationEvent `json:"events"`
+}
+
+// BatchEventResponse represents the response from the server for batch events
+type BatchEventResponse struct {
+	Success      bool   `json:"success"`
+	Message      string `json:"message"`
+	Processed    int    `json:"processed"`
+	Failed       int    `json:"failed"`
+	FailedEvents []int  `json:"failedEvents,omitempty"`
 }
 
 // generateEventID generates a unique event ID

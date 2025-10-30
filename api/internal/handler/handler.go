@@ -594,3 +594,21 @@ func (h *Handler) TrackEvent(ctx context.Context, req *dto.TrackEventRequest) (*
 	logger.Info().Str("eventId", req.ID).Msg("Event tracked successfully")
 	return response, nil
 }
+
+// TrackBatchEvent handles the business logic for tracking multiple evaluation events in batch
+func (h *Handler) TrackBatchEvent(ctx context.Context, req *dto.TrackBatchEventRequest) (*dto.TrackBatchEventResponse, error) {
+	logger := log.Ctx(ctx).With().Str("handler", "track-batch-event").Logger()
+	logger.Info().Int("eventCount", len(req.Events)).Msg("Tracking batch events")
+
+	response, err := h.service.TrackBatchEvent(ctx, req)
+	if err != nil {
+		logger.Error().Err(err).Int("eventCount", len(req.Events)).Msg("Failed to track batch events")
+		return nil, err
+	}
+
+	logger.Info().
+		Int("processed", response.Processed).
+		Int("failed", response.Failed).
+		Msg("Batch events tracked successfully")
+	return response, nil
+}

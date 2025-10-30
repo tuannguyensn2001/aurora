@@ -82,6 +82,7 @@ type Service interface {
 
 	// Event operations
 	TrackEvent(ctx context.Context, req *dto.TrackEventRequest) (*dto.TrackEventResponse, error)
+	TrackBatchEvent(ctx context.Context, req *dto.TrackBatchEventRequest) (*dto.TrackBatchEventResponse, error)
 }
 
 // service implements Service
@@ -111,4 +112,9 @@ func New(repo repository.Repository, riverClient *river.Client[pgx.Tx], auroraCl
 // TrackEvent tracks an evaluation event
 func (s *service) TrackEvent(ctx context.Context, req *dto.TrackEventRequest) (*dto.TrackEventResponse, error) {
 	return s.eventService.TrackEvent(ctx, req)
+}
+
+// TrackBatchEvent tracks multiple evaluation events in batch
+func (s *service) TrackBatchEvent(ctx context.Context, req *dto.TrackBatchEventRequest) (*dto.TrackBatchEventResponse, error) {
+	return s.eventService.TrackBatchEvent(ctx, req)
 }

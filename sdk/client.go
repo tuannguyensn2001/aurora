@@ -90,6 +90,7 @@ type AuroraClient struct {
 	eventTracker *EventTracker
 	onEvaluate   func(source string, parameterName string, attribute *Attribute, rolloutValueRaw *string, err error)
 	storage      storage
+	batchConfig  BatchConfig
 }
 
 // ClientOptions holds the required configuration options for the client
@@ -97,6 +98,15 @@ type ClientOptions struct {
 	S3BucketName string
 	EndpointURL  string
 	ServiceName  string
+}
+
+// BatchConfig holds configuration for event batching
+type BatchConfig struct {
+	MaxSize     int           // Maximum number of events per batch
+	MaxBytes    int           // Maximum bytes per batch
+	MaxWaitTime time.Duration // Maximum wait time before flushing batch
+	FlushSize   int           // Size at which to flush batch immediately
+	FlushBytes  int           // Bytes at which to flush batch immediately
 }
 
 // Option represents a functional option for configuring the client
@@ -150,6 +160,41 @@ func WithOnEvaluate(onEvaluate func(source string, parameterName string, attribu
 	}
 }
 
+// WithBatchMaxSize sets the maximum number of events per batch
+func WithBatchMaxSize(maxSize int) Option {
+	return func(c *AuroraClient) {
+		c.batchConfig.MaxSize = maxSize
+	}
+}
+
+// WithBatchMaxBytes sets the maximum bytes per batch
+func WithBatchMaxBytes(maxBytes int) Option {
+	return func(c *AuroraClient) {
+		c.batchConfig.MaxBytes = maxBytes
+	}
+}
+
+// WithBatchMaxWaitTime sets the maximum wait time before flushing batch
+func WithBatchMaxWaitTime(maxWaitTime time.Duration) Option {
+	return func(c *AuroraClient) {
+		c.batchConfig.MaxWaitTime = maxWaitTime
+	}
+}
+
+// WithBatchFlushSize sets the size at which to flush batch immediately
+func WithBatchFlushSize(flushSize int) Option {
+	return func(c *AuroraClient) {
+		c.batchConfig.FlushSize = flushSize
+	}
+}
+
+// WithBatchFlushBytes sets the bytes at which to flush batch immediately
+func WithBatchFlushBytes(flushBytes int) Option {
+	return func(c *AuroraClient) {
+		c.batchConfig.FlushBytes = flushBytes
+	}
+}
+
 func (c *AuroraClient) applyDefaults() {
 	// Set defaults
 	c.refreshRate = defaultRefreshRate
@@ -158,6 +203,15 @@ func (c *AuroraClient) applyDefaults() {
 	c.path = defaultPath
 	c.enableS3 = true
 	c.quit = make(chan struct{})
+
+	// Set default batch configuration
+	c.batchConfig = BatchConfig{
+		MaxSize:     100,              // 100 events per batch
+		MaxBytes:    1048576,          // 1MB per batch
+		MaxWaitTime: 30 * time.Second, // 30 seconds max wait
+		FlushSize:   10,               // Flush at 10 events
+		FlushBytes:  104857,           // Flush at 100KB
+	}
 
 	// Set up AWS S3 client
 	if c.enableS3 {
@@ -209,7 +263,7 @@ func NewClient(clientOptions ClientOptions, options ...Option) (*AuroraClient, e
 	}
 	c.storage = newStorage(db, c.logger)
 	c.engine = newEngine(c.logger)
-	c.eventTracker = NewEventTracker(c.endpointUrl, c.serviceName, c.logger)
+	c.eventTracker = NewEventTracker(c.endpointUrl, c.serviceName, c.logger, c.batchConfig)
 	return c, nil
 }
 
@@ -231,6 +285,10 @@ func (c *AuroraClient) Start(ctx context.Context) error {
 
 // Stop shuts down the client gracefully
 func (c *AuroraClient) Stop() {
+	// Flush any pending events before stopping
+	if c.eventTracker != nil {
+		c.eventTracker.Stop(context.Background())
+	}
 	c.storage.close(context.Background())
 	close(c.quit)
 }

@@ -32,3 +32,17 @@ type TrackEventResponse struct {
 	Success bool   `json:"success"`
 	Message string `json:"message"`
 }
+
+// TrackBatchEventRequest represents the request to track multiple evaluation events
+type TrackBatchEventRequest struct {
+	Events []TrackEventRequest `json:"events" binding:"required,min=1,max=1000"`
+}
+
+// TrackBatchEventResponse represents the response after tracking batch events
+type TrackBatchEventResponse struct {
+	Success      bool   `json:"success"`
+	Message      string `json:"message"`
+	Processed    int    `json:"processed"`
+	Failed       int    `json:"failed"`
+	FailedEvents []int  `json:"failedEvents,omitempty"` // Indices of failed events
+}
