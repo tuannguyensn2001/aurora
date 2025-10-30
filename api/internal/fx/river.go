@@ -32,6 +32,8 @@ func ProvideRiver(lc fx.Lifecycle, params RiverParams) *river.Client[pgx.Tx] {
 		Workers: workers,
 		Queues: map[string]river.QueueConfig{
 			river.QueueDefault: {MaxWorkers: 1},
+			"sync_experiment":  {MaxWorkers: 1},
+			"sync_parameter":   {MaxWorkers: 1},
 		},
 		Middleware: []rivertype.Middleware{
 			&loggingMiddleware{
