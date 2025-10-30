@@ -20,6 +20,7 @@ func ProvideSDK(lc fx.Lifecycle, params SDKParams) sdk.Client {
 	client, err := sdk.NewClient(sdk.ClientOptions{
 		S3BucketName: params.Cfg.S3.BucketName,
 		EndpointURL:  fmt.Sprintf("http://localhost:%d", params.Cfg.Service.Port),
+		ServiceName:  "aurora",
 	},
 		sdk.WithPath("sdk-dump"),
 		sdk.WithLogLevel(slog.LevelError),

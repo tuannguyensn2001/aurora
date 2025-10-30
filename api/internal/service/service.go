@@ -11,6 +11,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/riverqueue/river"
+	"github.com/rs/zerolog/log"
 	"golang.org/x/oauth2"
 )
 
@@ -78,6 +79,9 @@ type Service interface {
 	GetGoogleUserInfo(ctx context.Context, accessToken string) (*GoogleUserInfo, error)
 	GetUserByID(ctx context.Context, id uint) (*model.User, error)
 	RefreshToken(ctx context.Context, cfg *config.Config, refreshToken string) (*dto.AuthResponse, error)
+
+	// Event operations
+	TrackEvent(ctx context.Context, req *dto.TrackEventRequest) (*dto.TrackEventResponse, error)
 }
 
 // service implements Service
@@ -86,14 +90,25 @@ type service struct {
 	riverClient  *river.Client[pgx.Tx]
 	auroraClient sdk.Client
 	solver       solver.Solver
+	eventService *EventService
 }
 
 // New creates a new service
 func New(repo repository.Repository, riverClient *river.Client[pgx.Tx], auroraClient sdk.Client, solver solver.Solver) Service {
+	// Create event service
+	eventRepo := repository.NewEventRepository(repo.GetDB())
+	eventService := NewEventService(eventRepo, log.Logger)
+
 	return &service{
 		repo:         repo,
 		riverClient:  riverClient,
 		auroraClient: auroraClient,
 		solver:       solver,
+		eventService: eventService,
 	}
+}
+
+// TrackEvent tracks an evaluation event
+func (s *service) TrackEvent(ctx context.Context, req *dto.TrackEventRequest) (*dto.TrackEventResponse, error) {
+	return s.eventService.TrackEvent(ctx, req)
 }

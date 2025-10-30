@@ -67,3 +67,12 @@ func (a *Attribute) Values() []interface{} {
 func (a *Attribute) Len() int {
 	return len(a.m)
 }
+
+// ToMap returns a copy of the internal map
+func (a *Attribute) ToMap() map[string]interface{} {
+	result := make(map[string]interface{})
+	for k, v := range a.m {
+		result[k] = v
+	}
+	return result
+}

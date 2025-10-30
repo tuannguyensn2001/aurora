@@ -86,6 +86,8 @@ type AuroraClient struct {
 	engine       *engine
 	endpointUrl  string
 	enableS3     bool
+	serviceName  string
+	eventTracker *EventTracker
 	onEvaluate   func(source string, parameterName string, attribute *Attribute, rolloutValueRaw *string, err error)
 	storage      storage
 }
@@ -94,6 +96,7 @@ type AuroraClient struct {
 type ClientOptions struct {
 	S3BucketName string
 	EndpointURL  string
+	ServiceName  string
 }
 
 // Option represents a functional option for configuring the client
@@ -178,6 +181,7 @@ func NewClient(clientOptions ClientOptions, options ...Option) (*AuroraClient, e
 	c := &AuroraClient{
 		s3BucketName: clientOptions.S3BucketName,
 		endpointUrl:  clientOptions.EndpointURL,
+		serviceName:  clientOptions.ServiceName,
 	}
 
 	// Apply defaults
@@ -205,6 +209,7 @@ func NewClient(clientOptions ClientOptions, options ...Option) (*AuroraClient, e
 	}
 	c.storage = newStorage(db, c.logger)
 	c.engine = newEngine(c.logger)
+	c.eventTracker = NewEventTracker(c.endpointUrl, c.serviceName, c.logger)
 	return c, nil
 }
 
@@ -373,40 +378,67 @@ func (c *AuroraClient) getExperiments(ctx context.Context) ([]Experiment, error)
 // EvaluateParameter evaluates a parameter against the given attributes
 func (c *AuroraClient) EvaluateParameter(ctx context.Context, parameterName string, attribute *Attribute) RolloutValue {
 
-	resExperiments := c.resolveFromExperiments(ctx, parameterName, attribute)
+	experimentResult, resExperiments := c.resolveFromExperiments(ctx, parameterName, attribute)
 	if !resExperiments.HasError() {
 		if c.onEvaluate != nil {
 			c.onEvaluate("experiment", parameterName, attribute, resExperiments.raw(), resExperiments.Error())
 		}
+
+		// Track experiment evaluation event
+		if c.eventTracker != nil {
+			event := c.eventTracker.CreateExperimentEvaluationEvent(
+				parameterName,
+				attribute,
+				resExperiments.raw(),
+				resExperiments.Error(),
+				experimentResult.ExperimentID,
+				experimentResult.ExperimentUUID,
+				experimentResult.VariantID,
+				experimentResult.VariantName,
+			)
+			c.eventTracker.TrackEvent(ctx, event)
+		}
+
 		return resExperiments
 	}
 
 	res := c.resolveFromParameter(ctx, parameterName, attribute)
 
 	if c.onEvaluate != nil {
-
 		c.onEvaluate("parameter", parameterName, attribute, res.raw(), res.Error())
 	}
+
+	// Track parameter evaluation event
+	if c.eventTracker != nil {
+		event := c.eventTracker.CreateParameterEvaluationEvent(
+			parameterName,
+			attribute,
+			res.raw(),
+			res.Error(),
+		)
+		c.eventTracker.TrackEvent(ctx, event)
+	}
+
 	return res
 }
 
-func (c *AuroraClient) resolveFromExperiments(ctx context.Context, parameterName string, attribute *Attribute) RolloutValue {
+func (c *AuroraClient) resolveFromExperiments(ctx context.Context, parameterName string, attribute *Attribute) (*ExperimentEvaluationResult, RolloutValue) {
 	experiments, err := c.storage.getExperimentsByParameterName(ctx, parameterName)
 	if err != nil {
 		c.logger.ErrorContext(ctx, "failed to get experiments by parameter name", "error", err)
-		return NewRolloutValueWithError(NewParameterNotFoundError(parameterName))
+		return nil, NewRolloutValueWithError(NewParameterNotFoundError(parameterName))
 	}
 	if len(experiments) == 0 {
-		return NewRolloutValueWithError(NewParameterNotFoundError(parameterName))
+		return nil, NewRolloutValueWithError(NewParameterNotFoundError(parameterName))
 	}
 
 	for _, experiment := range experiments {
-		val, dataType, ok := c.engine.evaluateExperiment(&experiment, attribute, parameterName)
-		if ok {
-			return NewRolloutValue(&val, dataType)
+		result := c.engine.evaluateExperimentDetailed(&experiment, attribute, parameterName)
+		if result.Success {
+			return result, NewRolloutValue(&result.Value, result.DataType)
 		}
 	}
-	return NewRolloutValueWithError(NewParameterNotFoundError(parameterName))
+	return nil, NewRolloutValueWithError(NewParameterNotFoundError(parameterName))
 }
 
 func (c *AuroraClient) resolveFromParameter(ctx context.Context, parameterName string, attribute *Attribute) RolloutValue {

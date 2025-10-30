@@ -579,3 +579,18 @@ func (h *Handler) GetCurrentUser(ctx context.Context, userID uint) (*dto.UserInf
 		LastLoginAt: lastLogin,
 	}, nil
 }
+
+// TrackEvent handles the business logic for tracking evaluation events
+func (h *Handler) TrackEvent(ctx context.Context, req *dto.TrackEventRequest) (*dto.TrackEventResponse, error) {
+	logger := log.Ctx(ctx).With().Str("handler", "track-event").Logger()
+	logger.Info().Str("eventId", req.ID).Str("serviceName", req.ServiceName).Msg("Tracking event")
+
+	response, err := h.service.TrackEvent(ctx, req)
+	if err != nil {
+		logger.Error().Err(err).Str("eventId", req.ID).Msg("Failed to track event")
+		return nil, err
+	}
+
+	logger.Info().Str("eventId", req.ID).Msg("Event tracked successfully")
+	return response, nil
+}

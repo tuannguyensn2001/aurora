@@ -135,7 +135,22 @@ func (e *engine) evaluateEnumCondition(condition Condition, attribute *Attribute
 	if !slices.Contains(condition.GetEnumOptions(), value) {
 		return false
 	}
-	return value == condition.GetValue()
+	values := strings.Split(condition.GetValue(), ",")
+	for i := range values {
+		values[i] = strings.TrimSpace(values[i])
+	}
+	return slices.Contains(values, value)
+}
+
+// ExperimentEvaluationResult contains the result of experiment evaluation with metadata
+type ExperimentEvaluationResult struct {
+	Value          string
+	DataType       ParameterDataType
+	Success        bool
+	ExperimentID   *int
+	ExperimentUUID *string
+	VariantID      *int
+	VariantName    *string
 }
 
 func (e *engine) evaluateExperiment(experiment *Experiment, attribute *Attribute, parameterName string) (string, ParameterDataType, bool) {
@@ -204,6 +219,87 @@ func (e *engine) evaluateExperiment(experiment *Experiment, attribute *Attribute
 	}
 
 	return "", "", false
+}
+
+// evaluateExperimentDetailed returns detailed experiment evaluation result
+func (e *engine) evaluateExperimentDetailed(experiment *Experiment, attribute *Attribute, parameterName string) *ExperimentEvaluationResult {
+	result := &ExperimentEvaluationResult{
+		ExperimentID:   &experiment.ID,
+		ExperimentUUID: &experiment.Uuid,
+		Success:        false,
+	}
+
+	if err := experiment.isValid(); err != nil {
+		e.logger.Debug("experiment is invalid", "experiment", experiment, "error", err)
+		return result
+	}
+
+	if experiment.Segment != nil {
+		rules := experiment.Segment.Rules
+		passRule := 0
+		for _, rule := range rules {
+			if e.evaluateSegmentRuleConditions(&rule, attribute) {
+				passRule++
+				break
+			}
+		}
+		if passRule == 0 {
+			e.logger.Debug("no rules passed", "experiment", experiment)
+			return result
+		}
+	}
+
+	valuePopulation := fmt.Sprintf("%v", attribute.Get(experiment.HashAttributeName))
+	keyPopulation := fmt.Sprintf("experiment:population:%s:%s", experiment.Uuid, valuePopulation)
+	inPopulation := e.inPopulation(keyPopulation, 0, experiment.PopulationSize)
+	if !inPopulation {
+		e.logger.Debug("not in population", "experiment", experiment)
+		return result
+	}
+
+	trafficAllocation := make([]int, 0)
+	for _, variant := range experiment.Variants {
+		if len(trafficAllocation) == 0 {
+			trafficAllocation = append(trafficAllocation, variant.TrafficAllocation)
+		} else {
+			trafficAllocation = append(trafficAllocation, trafficAllocation[len(trafficAllocation)-1]+variant.TrafficAllocation)
+		}
+	}
+	index := -1
+	valueHash := fmt.Sprintf("experiment:hash:%s:%s", experiment.Uuid, valuePopulation)
+	for i, allocation := range trafficAllocation {
+		check := false
+		if i == 0 {
+			check = e.inPopulation(valueHash, 0, allocation)
+		} else if i == len(trafficAllocation)-1 {
+			check = e.inPopulation(valueHash, trafficAllocation[i-1], 100)
+		} else {
+			check = e.inPopulation(valueHash, trafficAllocation[i-1], allocation)
+		}
+		if check {
+			index = i
+			break
+		}
+	}
+	if index == -1 {
+		e.logger.Debug("not in traffic allocation", "experiment", experiment)
+		return result
+	}
+
+	variant := experiment.Variants[index]
+	result.VariantID = &variant.ID
+	result.VariantName = &variant.Name
+
+	for _, parameter := range variant.Parameters {
+		if parameter.ParameterName == parameterName {
+			result.Value = parameter.RolloutValue
+			result.DataType = parameter.ParameterDataType
+			result.Success = true
+			return result
+		}
+	}
+
+	return result
 }
 
 func (e *engine) evaluateParameter(parameter *Parameter, attribute *Attribute) string {

@@ -67,6 +67,7 @@ func (r *Router) SetupRoutes(engine *gin.Engine) {
 			sdk.POST("/metadata", r.getMetadataSDK)
 			sdk.POST("/parameters", r.getAllParametersSDK)
 			sdk.POST("/experiments", r.getAllExperimentsSDK)
+			sdk.POST("/events", r.trackEvent)
 		}
 
 		// Protected routes group (require JWT authentication)
@@ -697,6 +698,23 @@ func (r *Router) getAllExperimentsSDK(c *gin.Context) {
 	}
 
 	result, err := r.handler.GetAllExperimentsSDK(c.Request.Context(), &req)
+	if err != nil {
+		c.Error(err)
+		return
+	}
+
+	c.JSON(http.StatusOK, result)
+}
+
+// SDK event tracking handler
+func (r *Router) trackEvent(c *gin.Context) {
+	var req dto.TrackEventRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.Error(err)
+		return
+	}
+
+	result, err := r.handler.TrackEvent(c.Request.Context(), &req)
 	if err != nil {
 		c.Error(err)
 		return
