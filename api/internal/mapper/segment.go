@@ -3,7 +3,7 @@ package mapper
 import (
 	"api/internal/model"
 	"errors"
-	"sdk"
+	sdk "sdk/types"
 )
 
 // SegmentToSDK converts a model.Segment to sdk.Segment
@@ -53,11 +53,9 @@ func segmentRulesToSDK(rules []model.SegmentRule) ([]sdk.SegmentRule, error) {
 		}
 
 		sdkRules[i] = sdk.SegmentRule{
-			ID:          rule.ID,
-			Name:        rule.Name,
-			Description: rule.Description,
-			SegmentID:   rule.SegmentID,
-			Conditions:  sdkConditions,
+			ID:         rule.ID,
+			SegmentID:  rule.SegmentID,
+			Conditions: sdkConditions,
 		}
 	}
 
@@ -82,7 +80,6 @@ func segmentRuleConditionsToSDK(conditions []model.SegmentRuleCondition) ([]sdk.
 
 		sdkConditions[i] = sdk.RuleCondition{
 			ID:                condition.ID,
-			AttributeID:       condition.AttributeID,
 			Operator:          sdk.ConditionOperator(condition.Operator),
 			Value:             condition.Value,
 			AttributeName:     attributeName,

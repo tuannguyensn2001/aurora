@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"sdk"
+	"sdk/types"
 	"strconv"
 
 	"github.com/rs/zerolog/log"
@@ -703,7 +704,7 @@ func (s *service) SimulateParameter(ctx context.Context, req *dto.SimulateParame
 	}, nil
 }
 
-func (s *service) GetAllParametersSDK(ctx context.Context) ([]sdk.Parameter, error) {
+func (s *service) GetAllParametersSDK(ctx context.Context) ([]types.Parameter, error) {
 	// Use optimized method that only queries id and raw_value fields
 	// This avoids expensive preloading since raw_value contains all necessary data
 	parameters, err := s.repo.GetAllParametersForSDK(ctx)

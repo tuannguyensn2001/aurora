@@ -26,6 +26,8 @@ func ProvideSDK(lc fx.Lifecycle, params SDKParams) sdk.Client {
 		sdk.WithLogLevel(slog.LevelError),
 		sdk.WithRefreshRate(1*time.Minute),
 		sdk.WithEnableS3(true),
+		sdk.WithBatchMaxSize(1),
+		sdk.WithBatchFlushSize(1),
 		sdk.WithOnEvaluate(func(source string, parameterName string, attribute *sdk.Attribute, rolloutValueRaw *string, err error) {
 			// slog.Info("SDK evaluated parameter", "source", source, "parameterName", parameterName, "attribute", attribute, "rolloutValueRaw", *rolloutValueRaw, "error", err)
 			slog.Info("SDK evaluated parameter", "source", source, "parameterName", parameterName, "attribute", attribute, "rolloutValueRaw", rolloutValueRaw, "error", err)

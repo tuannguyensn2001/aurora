@@ -4,7 +4,7 @@ import (
 	"api/internal/model"
 	"encoding/json"
 	"errors"
-	"sdk"
+	sdk "sdk/types"
 )
 
 // ParameterToSDK converts a model.Parameter to sdk.Parameter
@@ -131,7 +131,6 @@ func extractRulesFromRawData(rulesData []interface{}) ([]sdk.ParameterRule, erro
 
 		// Extract basic rule fields
 		var ruleID uint
-		var ruleName string
 		var ruleType sdk.RuleType
 		var rolloutValue string
 		var segmentID int64
@@ -140,9 +139,6 @@ func extractRulesFromRawData(rulesData []interface{}) ([]sdk.ParameterRule, erro
 
 		if id, ok := ruleMap["id"].(float64); ok {
 			ruleID = uint(id)
-		}
-		if name, ok := ruleMap["name"].(string); ok {
-			ruleName = name
 		}
 		if rType, ok := ruleMap["type"].(string); ok {
 			ruleType = sdk.RuleType(rType)
@@ -198,9 +194,6 @@ func extractRulesFromRawData(rulesData []interface{}) ([]sdk.ParameterRule, erro
 					if id, ok := condMap["id"].(float64); ok {
 						condition.ID = uint(id)
 					}
-					if attrID, ok := condMap["attributeId"].(float64); ok {
-						condition.AttributeID = uint(attrID)
-					}
 					if op, ok := condMap["operator"].(string); ok {
 						condition.Operator = sdk.ConditionOperator(op)
 					}
@@ -229,12 +222,18 @@ func extractRulesFromRawData(rulesData []interface{}) ([]sdk.ParameterRule, erro
 			}
 		}
 
+		// Convert segmentID to *uint for SDK
+		var segmentIDPtr *uint
+		if segmentID > 0 {
+			segmentIDUint := uint(segmentID)
+			segmentIDPtr = &segmentIDUint
+		}
+
 		sdkRules[i] = sdk.ParameterRule{
 			ID:           ruleID,
-			Name:         ruleName,
 			Type:         ruleType,
 			RolloutValue: rolloutValue,
-			SegmentID:    segmentID,
+			SegmentID:    segmentIDPtr,
 			MatchType:    matchType,
 			Conditions:   conditions,
 			Segment:      segment,
@@ -301,12 +300,18 @@ func parameterRulesToSDK(rules []model.ParameterRule) ([]sdk.ParameterRule, erro
 
 		}
 
+		// Convert segmentID to *uint for SDK
+		var segmentIDPtr *uint
+		if segmentID > 0 {
+			segmentIDUint := uint(segmentID)
+			segmentIDPtr = &segmentIDUint
+		}
+
 		sdkRules[i] = sdk.ParameterRule{
 			ID:           rule.ID,
-			Name:         rule.Name,
 			Type:         sdk.RuleType(rule.Type),
 			RolloutValue: rolloutValueStr,
-			SegmentID:    segmentID,
+			SegmentID:    segmentIDPtr,
 			MatchType:    matchType,
 			Conditions:   sdkConditions,
 			Segment:      segment,
@@ -330,7 +335,6 @@ func parameterRuleConditionsToSDK(conditions []model.ParameterRuleCondition) ([]
 
 		sdkConditions[i] = sdk.RuleCondition{
 			ID:                condition.ID,
-			AttributeID:       condition.AttributeID,
 			Operator:          sdk.ConditionOperator(condition.Operator),
 			Value:             condition.Value,
 			AttributeName:     attributeName,

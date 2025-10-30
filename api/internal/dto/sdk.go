@@ -1,6 +1,6 @@
 package dto
 
-import "sdk"
+import "sdk/types"
 
 type GetMetadataSDKRequest struct {
 }
@@ -13,12 +13,12 @@ type GetAllParametersSDKRequest struct {
 }
 
 type GetAllParametersSDKResponse struct {
-	Parameters []sdk.Parameter `json:"parameters"`
+	Parameters []types.Parameter `json:"parameters"`
 }
 
 type GetAllExperimentsSDKRequest struct {
 }
 
 type GetAllExperimentsSDKResponse struct {
-	Experiments []sdk.Experiment `json:"experiments"`
+	Experiments []types.Experiment `json:"experiments"`
 }

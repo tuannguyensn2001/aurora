@@ -1,13 +1,6 @@
-package sdk
+package errors
 
 import "fmt"
-
-// SDKError represents different types of errors that can occur in the SDK
-type SDKError struct {
-	Type    ErrorType
-	Message string
-	Cause   error
-}
 
 // ErrorType represents the category of error
 type ErrorType string
@@ -25,7 +18,18 @@ const (
 	ErrorTypeNetworkError ErrorType = "network_error"
 	// ErrorTypeConfigurationError indicates a configuration error
 	ErrorTypeConfigurationError ErrorType = "configuration_error"
+	// ErrorTypeValidationError indicates a validation error
+	ErrorTypeValidationError ErrorType = "validation_error"
+	// ErrorTypeTimeoutError indicates a timeout error
+	ErrorTypeTimeoutError ErrorType = "timeout_error"
 )
+
+// SDKError represents different types of errors that can occur in the SDK
+type SDKError struct {
+	Type    ErrorType
+	Message string
+	Cause   error
+}
 
 // Error implements the error interface
 func (e SDKError) Error() string {
@@ -73,11 +77,11 @@ func NewInvalidAttributeError(attributeName string, reason string) *SDKError {
 }
 
 // NewEvaluationFailedError creates an evaluation failed error
-func NewEvaluationFailedError(parameterName string, cause error) *SDKError {
+func NewEvaluationFailedError(parameterName string, reason string) *SDKError {
 	return NewSDKError(
 		ErrorTypeEvaluationFailed,
-		fmt.Sprintf("failed to evaluate parameter '%s'", parameterName),
-		cause,
+		fmt.Sprintf("evaluation failed for parameter '%s': %s", parameterName, reason),
+		nil,
 	)
 }
 
@@ -85,7 +89,7 @@ func NewEvaluationFailedError(parameterName string, cause error) *SDKError {
 func NewStorageError(operation string, cause error) *SDKError {
 	return NewSDKError(
 		ErrorTypeStorageError,
-		fmt.Sprintf("storage operation '%s' failed", operation),
+		fmt.Sprintf("storage operation failed: %s", operation),
 		cause,
 	)
 }
@@ -94,7 +98,7 @@ func NewStorageError(operation string, cause error) *SDKError {
 func NewNetworkError(operation string, cause error) *SDKError {
 	return NewSDKError(
 		ErrorTypeNetworkError,
-		fmt.Sprintf("network operation '%s' failed", operation),
+		fmt.Sprintf("network operation failed: %s", operation),
 		cause,
 	)
 }
@@ -104,6 +108,24 @@ func NewConfigurationError(message string, cause error) *SDKError {
 	return NewSDKError(
 		ErrorTypeConfigurationError,
 		message,
+		cause,
+	)
+}
+
+// NewValidationError creates a validation error
+func NewValidationError(message string, cause error) *SDKError {
+	return NewSDKError(
+		ErrorTypeValidationError,
+		message,
+		cause,
+	)
+}
+
+// NewTimeoutError creates a timeout error
+func NewTimeoutError(operation string, cause error) *SDKError {
+	return NewSDKError(
+		ErrorTypeTimeoutError,
+		fmt.Sprintf("operation timed out: %s", operation),
 		cause,
 	)
 }

@@ -8,6 +8,7 @@ import (
 	"api/internal/repository"
 	"context"
 	"sdk"
+	"sdk/types"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/riverqueue/river"
@@ -41,7 +42,7 @@ type Service interface {
 	GetParameterByID(ctx context.Context, id uint) (*model.Parameter, error)
 	GetParameterByName(ctx context.Context, name string) (*model.Parameter, error)
 	GetAllParameters(ctx context.Context) ([]*model.Parameter, error)
-	GetAllParametersSDK(ctx context.Context) ([]sdk.Parameter, error)
+	GetAllParametersSDK(ctx context.Context) ([]types.Parameter, error)
 	UpdateParameter(ctx context.Context, id uint, req *dto.UpdateParameterRequest) (*model.Parameter, error)
 	UpdateParameterWithRules(ctx context.Context, id uint, req *dto.UpdateParameterWithRulesRequest) (*model.Parameter, error)
 	DeleteParameter(ctx context.Context, id uint) error
@@ -69,7 +70,7 @@ type Service interface {
 	ApproveExperiment(ctx context.Context, id uint, req *dto.ApproveExperimentRequest) (*model.Experiment, error)
 	AbortExperiment(ctx context.Context, id uint, req *dto.AbortExperimentRequest) (*model.Experiment, error)
 	SimulateParameter(ctx context.Context, req *dto.SimulateParameterRequest) (dto.SimulateParameterResponse, error)
-	GetActiveExperimentsSDK(ctx context.Context) ([]sdk.Experiment, error)
+	GetActiveExperimentsSDK(ctx context.Context) ([]types.Experiment, error)
 
 	// Auth operations
 	GetGoogleOAuthConfig(cfg *config.Config) *oauth2.Config

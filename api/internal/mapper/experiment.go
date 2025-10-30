@@ -5,38 +5,38 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"sdk"
+	"sdk/types"
 )
 
 // ExperimentToSDK converts a model.Experiment to sdk.Experiment with its variants
-func ExperimentToSDK(experiment *model.Experiment) (sdk.Experiment, error) {
+func ExperimentToSDK(experiment *model.Experiment) (types.Experiment, error) {
 	if experiment == nil {
-		return sdk.Experiment{}, errors.New("experiment is nil")
+		return types.Experiment{}, errors.New("experiment is nil")
 	}
 
-	var segment *sdk.Segment
+	var segment *types.Segment
 	if experiment.Segment != nil {
 		sdkSegment, err := SegmentToSDK(experiment.Segment)
 		if err != nil {
-			return sdk.Experiment{}, err
+			return types.Experiment{}, err
 		}
 		segment = &sdkSegment
 	}
 
 	// Convert variants with their parameters
-	var sdkVariants []sdk.ExperimentVariant
+	var sdkVariants []types.ExperimentVariant
 	if experiment.Variants != nil {
-		sdkVariants = make([]sdk.ExperimentVariant, len(experiment.Variants))
+		sdkVariants = make([]types.ExperimentVariant, len(experiment.Variants))
 		for i, variant := range experiment.Variants {
 			sdkVariant, err := ExperimentVariantToSDK(&variant)
 			if err != nil {
-				return sdk.Experiment{}, err
+				return types.Experiment{}, err
 			}
 			sdkVariants[i] = sdkVariant
 		}
 	}
 
-	return sdk.Experiment{
+	return types.Experiment{
 		ID:                experiment.ID,
 		Name:              experiment.Name,
 		Uuid:              experiment.Uuid,
@@ -54,8 +54,8 @@ func ExperimentToSDK(experiment *model.Experiment) (sdk.Experiment, error) {
 }
 
 // ExperimentsToSDK converts a slice of model.Experiment to slice of sdk.Experiment
-func ExperimentsToSDK(experiments []*model.Experiment) ([]sdk.Experiment, error) {
-	sdkExperiments := make([]sdk.Experiment, len(experiments))
+func ExperimentsToSDK(experiments []*model.Experiment) ([]types.Experiment, error) {
+	sdkExperiments := make([]types.Experiment, len(experiments))
 	for i, experiment := range experiments {
 		sdkExperiment, err := ExperimentToSDK(experiment)
 		if err != nil {
@@ -67,25 +67,25 @@ func ExperimentsToSDK(experiments []*model.Experiment) ([]sdk.Experiment, error)
 }
 
 // ExperimentVariantToSDK converts a model.ExperimentVariant to sdk.ExperimentVariant with its parameters
-func ExperimentVariantToSDK(variant *model.ExperimentVariant) (sdk.ExperimentVariant, error) {
+func ExperimentVariantToSDK(variant *model.ExperimentVariant) (types.ExperimentVariant, error) {
 	if variant == nil {
-		return sdk.ExperimentVariant{}, errors.New("experiment variant is nil")
+		return types.ExperimentVariant{}, errors.New("experiment variant is nil")
 	}
 
 	// Convert parameters
-	var sdkParameters []sdk.ExperimentVariantParameter
+	var sdkParameters []types.ExperimentVariantParameter
 	if variant.Parameters != nil {
-		sdkParameters = make([]sdk.ExperimentVariantParameter, len(variant.Parameters))
+		sdkParameters = make([]types.ExperimentVariantParameter, len(variant.Parameters))
 		for i, param := range variant.Parameters {
 			sdkParam, err := ExperimentVariantParameterToSDK(&param)
 			if err != nil {
-				return sdk.ExperimentVariant{}, err
+				return types.ExperimentVariant{}, err
 			}
 			sdkParameters[i] = sdkParam
 		}
 	}
 
-	return sdk.ExperimentVariant{
+	return types.ExperimentVariant{
 		ID:                variant.ID,
 		ExperimentID:      variant.ExperimentID,
 		Name:              variant.Name,
@@ -96,8 +96,8 @@ func ExperimentVariantToSDK(variant *model.ExperimentVariant) (sdk.ExperimentVar
 }
 
 // ExperimentVariantsToSDK converts a slice of model.ExperimentVariant to slice of sdk.ExperimentVariant
-func ExperimentVariantsToSDK(variants []*model.ExperimentVariant) ([]sdk.ExperimentVariant, error) {
-	sdkVariants := make([]sdk.ExperimentVariant, len(variants))
+func ExperimentVariantsToSDK(variants []*model.ExperimentVariant) ([]types.ExperimentVariant, error) {
+	sdkVariants := make([]types.ExperimentVariant, len(variants))
 	for i, variant := range variants {
 		sdkVariant, err := ExperimentVariantToSDK(variant)
 		if err != nil {
@@ -109,14 +109,14 @@ func ExperimentVariantsToSDK(variants []*model.ExperimentVariant) ([]sdk.Experim
 }
 
 // ExperimentVariantParameterToSDK converts a model.ExperimentVariantParameter to sdk.ExperimentVariantParameter
-func ExperimentVariantParameterToSDK(parameter *model.ExperimentVariantParameter) (sdk.ExperimentVariantParameter, error) {
+func ExperimentVariantParameterToSDK(parameter *model.ExperimentVariantParameter) (types.ExperimentVariantParameter, error) {
 	if parameter == nil {
-		return sdk.ExperimentVariantParameter{}, errors.New("experiment variant parameter is nil")
+		return types.ExperimentVariantParameter{}, errors.New("experiment variant parameter is nil")
 	}
 
-	return sdk.ExperimentVariantParameter{
+	return types.ExperimentVariantParameter{
 		ID:                parameter.ID,
-		ParameterDataType: sdk.ParameterDataType(parameter.ParameterDataType),
+		ParameterDataType: types.ParameterDataType(parameter.ParameterDataType),
 		ParameterID:       parameter.ParameterID,
 		ParameterName:     parameter.ParameterName,
 		RolloutValue:      parameter.RolloutValue,
@@ -124,8 +124,8 @@ func ExperimentVariantParameterToSDK(parameter *model.ExperimentVariantParameter
 }
 
 // ExperimentVariantParametersToSDK converts a slice of model.ExperimentVariantParameter to slice of sdk.ExperimentVariantParameter
-func ExperimentVariantParametersToSDK(parameters []*model.ExperimentVariantParameter) ([]sdk.ExperimentVariantParameter, error) {
-	sdkParameters := make([]sdk.ExperimentVariantParameter, len(parameters))
+func ExperimentVariantParametersToSDK(parameters []*model.ExperimentVariantParameter) ([]types.ExperimentVariantParameter, error) {
+	sdkParameters := make([]types.ExperimentVariantParameter, len(parameters))
 	for i, parameter := range parameters {
 		sdkParameter, err := ExperimentVariantParameterToSDK(parameter)
 		if err != nil {
@@ -138,24 +138,24 @@ func ExperimentVariantParametersToSDK(parameters []*model.ExperimentVariantParam
 
 // ExperimentWithVariantsToSDK converts experiment with its variants to SDK format
 // This function handles the case where variants and parameters are loaded separately
-func ExperimentWithVariantsToSDK(experiment *model.Experiment, variants []*model.ExperimentVariant, variantParameters map[int][]*model.ExperimentVariantParameter) (sdk.Experiment, error) {
+func ExperimentWithVariantsToSDK(experiment *model.Experiment, variants []*model.ExperimentVariant, variantParameters map[int][]*model.ExperimentVariantParameter) (types.Experiment, error) {
 	if experiment == nil {
-		return sdk.Experiment{}, errors.New("experiment is nil")
+		return types.Experiment{}, errors.New("experiment is nil")
 	}
 
-	var segment *sdk.Segment
+	var segment *types.Segment
 	if experiment.Segment != nil {
 		sdkSegment, err := SegmentToSDK(experiment.Segment)
 		if err != nil {
-			return sdk.Experiment{}, err
+			return types.Experiment{}, err
 		}
 		segment = &sdkSegment
 	}
 
 	// Convert variants with their parameters from the separate collections
-	var sdkVariants []sdk.ExperimentVariant
+	var sdkVariants []types.ExperimentVariant
 	if variants != nil {
-		sdkVariants = make([]sdk.ExperimentVariant, len(variants))
+		sdkVariants = make([]types.ExperimentVariant, len(variants))
 		for i, variant := range variants {
 			// Get parameters for this variant
 			var variantParams []model.ExperimentVariantParameter
@@ -172,13 +172,13 @@ func ExperimentWithVariantsToSDK(experiment *model.Experiment, variants []*model
 
 			sdkVariant, err := ExperimentVariantToSDK(&tempVariant)
 			if err != nil {
-				return sdk.Experiment{}, err
+				return types.Experiment{}, err
 			}
 			sdkVariants[i] = sdkVariant
 		}
 	}
 
-	return sdk.Experiment{
+	return types.Experiment{
 		ID:              experiment.ID,
 		Name:            experiment.Name,
 		Uuid:            experiment.Uuid,
@@ -196,9 +196,9 @@ func ExperimentWithVariantsToSDK(experiment *model.Experiment, variants []*model
 
 // ExperimentCompleteToSDK converts a complete experiment structure to SDK format
 // This is the most comprehensive function that handles all nested relationships
-func ExperimentCompleteToSDK(experiment *model.Experiment) (sdk.Experiment, error) {
+func ExperimentCompleteToSDK(experiment *model.Experiment) (types.Experiment, error) {
 	if experiment == nil {
-		return sdk.Experiment{}, errors.New("experiment is nil")
+		return types.Experiment{}, errors.New("experiment is nil")
 	}
 
 	// This function assumes the experiment model already has all nested data loaded
@@ -206,12 +206,12 @@ func ExperimentCompleteToSDK(experiment *model.Experiment) (sdk.Experiment, erro
 }
 
 // ExperimentBatchToSDK converts multiple experiments with their variants to SDK format
-func ExperimentBatchToSDK(experiments []*model.Experiment, experimentsVariants map[int][]*model.ExperimentVariant, variantParameters map[int][]*model.ExperimentVariantParameter) ([]sdk.Experiment, error) {
+func ExperimentBatchToSDK(experiments []*model.Experiment, experimentsVariants map[int][]*model.ExperimentVariant, variantParameters map[int][]*model.ExperimentVariantParameter) ([]types.Experiment, error) {
 	if experiments == nil {
-		return []sdk.Experiment{}, nil
+		return []types.Experiment{}, nil
 	}
 
-	sdkExperiments := make([]sdk.Experiment, len(experiments))
+	sdkExperiments := make([]types.Experiment, len(experiments))
 	for i, experiment := range experiments {
 		variants := experimentsVariants[experiment.ID]
 		sdkExp, err := ExperimentWithVariantsToSDK(experiment, variants, variantParameters)
@@ -226,12 +226,12 @@ func ExperimentBatchToSDK(experiments []*model.Experiment, experimentsVariants m
 
 // ExperimentsToSDKFromRawValue converts experiments with raw values to SDK format
 // This function uses the raw_value field from the database for efficient conversion
-func ExperimentsToSDKFromRawValue(experiments []model.Experiment) ([]sdk.Experiment, error) {
+func ExperimentsToSDKFromRawValue(experiments []model.Experiment) ([]types.Experiment, error) {
 	if experiments == nil {
-		return []sdk.Experiment{}, nil
+		return []types.Experiment{}, nil
 	}
 
-	sdkExperiments := make([]sdk.Experiment, len(experiments))
+	sdkExperiments := make([]types.Experiment, len(experiments))
 	for i, experiment := range experiments {
 		sdkExp, err := ExperimentToSDKFromRawValue(&experiment)
 		if err != nil {
@@ -245,22 +245,22 @@ func ExperimentsToSDKFromRawValue(experiments []model.Experiment) ([]sdk.Experim
 
 // ExperimentToSDKFromRawValue converts a single experiment with raw value to SDK format
 // This function uses the raw_value field for efficient conversion
-func ExperimentToSDKFromRawValue(experiment *model.Experiment) (sdk.Experiment, error) {
+func ExperimentToSDKFromRawValue(experiment *model.Experiment) (types.Experiment, error) {
 	if experiment == nil {
-		return sdk.Experiment{}, errors.New("experiment is nil")
+		return types.Experiment{}, errors.New("experiment is nil")
 	}
 
 	// If raw_value is available, use it for conversion
 	if len(experiment.RawValue) > 0 {
 		var rawData map[string]interface{}
 		if err := json.Unmarshal(experiment.RawValue, &rawData); err != nil {
-			return sdk.Experiment{}, fmt.Errorf("failed to unmarshal raw value: %w", err)
+			return types.Experiment{}, fmt.Errorf("failed to unmarshal raw value: %w", err)
 		}
 
 		// Convert raw data to SDK format
 		sdkExp, err := convertRawDataToSDK(rawData)
 		if err != nil {
-			return sdk.Experiment{}, err
+			return types.Experiment{}, err
 		}
 		return sdkExp, nil
 	}
@@ -270,56 +270,56 @@ func ExperimentToSDKFromRawValue(experiment *model.Experiment) (sdk.Experiment, 
 }
 
 // convertRawDataToSDK converts raw JSON data to SDK experiment format
-func convertRawDataToSDK(rawData map[string]interface{}) (sdk.Experiment, error) {
+func convertRawDataToSDK(rawData map[string]interface{}) (types.Experiment, error) {
 	// Extract basic experiment fields
 	id, ok := rawData["id"].(float64)
 	if !ok {
-		return sdk.Experiment{}, errors.New("invalid experiment id")
+		return types.Experiment{}, errors.New("invalid experiment id")
 	}
 
 	name, ok := rawData["name"].(string)
 	if !ok {
-		return sdk.Experiment{}, errors.New("invalid experiment name")
+		return types.Experiment{}, errors.New("invalid experiment name")
 	}
 
 	uuid, ok := rawData["uuid"].(string)
 	if !ok {
-		return sdk.Experiment{}, errors.New("invalid experiment uuid")
+		return types.Experiment{}, errors.New("invalid experiment uuid")
 	}
 
 	startDate, ok := rawData["startDate"].(float64)
 	if !ok {
-		return sdk.Experiment{}, errors.New("invalid experiment startDate")
+		return types.Experiment{}, errors.New("invalid experiment startDate")
 	}
 
 	endDate, ok := rawData["endDate"].(float64)
 	if !ok {
-		return sdk.Experiment{}, errors.New("invalid experiment endDate")
+		return types.Experiment{}, errors.New("invalid experiment endDate")
 	}
 
 	hashAttributeID, ok := rawData["hashAttributeId"].(float64)
 	if !ok {
-		return sdk.Experiment{}, errors.New("invalid experiment hashAttributeId")
+		return types.Experiment{}, errors.New("invalid experiment hashAttributeId")
 	}
 
 	populationSize, ok := rawData["populationSize"].(float64)
 	if !ok {
-		return sdk.Experiment{}, errors.New("invalid experiment populationSize")
+		return types.Experiment{}, errors.New("invalid experiment populationSize")
 	}
 
 	strategy, ok := rawData["strategy"].(string)
 	if !ok {
-		return sdk.Experiment{}, errors.New("invalid experiment strategy")
+		return types.Experiment{}, errors.New("invalid experiment strategy")
 	}
 
 	status, ok := rawData["status"].(string)
 	if !ok {
-		return sdk.Experiment{}, errors.New("invalid experiment status")
+		return types.Experiment{}, errors.New("invalid experiment status")
 	}
 
 	segmentID, ok := rawData["segmentId"].(float64)
 	if !ok {
-		return sdk.Experiment{}, errors.New("invalid experiment segmentId")
+		return types.Experiment{}, errors.New("invalid experiment segmentId")
 	}
 
 	// Extract hash attribute name
@@ -331,31 +331,31 @@ func convertRawDataToSDK(rawData map[string]interface{}) (sdk.Experiment, error)
 	}
 
 	// Extract segment
-	var segment *sdk.Segment
+	var segment *types.Segment
 	if segmentData, ok := rawData["segment"].(map[string]interface{}); ok {
 		sdkSegment, err := convertRawSegmentToSDK(segmentData)
 		if err != nil {
-			return sdk.Experiment{}, err
+			return types.Experiment{}, err
 		}
 		segment = &sdkSegment
 	}
 
 	// Extract variants
-	var variants []sdk.ExperimentVariant
+	var variants []types.ExperimentVariant
 	if variantsData, ok := rawData["variants"].([]interface{}); ok {
-		variants = make([]sdk.ExperimentVariant, len(variantsData))
+		variants = make([]types.ExperimentVariant, len(variantsData))
 		for i, variantData := range variantsData {
 			if variantMap, ok := variantData.(map[string]interface{}); ok {
 				sdkVariant, err := convertRawVariantToSDK(variantMap)
 				if err != nil {
-					return sdk.Experiment{}, err
+					return types.Experiment{}, err
 				}
 				variants[i] = sdkVariant
 			}
 		}
 	}
 
-	return sdk.Experiment{
+	return types.Experiment{
 		ID:                int(id),
 		Name:              name,
 		Uuid:              uuid,
@@ -373,20 +373,20 @@ func convertRawDataToSDK(rawData map[string]interface{}) (sdk.Experiment, error)
 }
 
 // ConvertRawSegmentToSDK converts raw segment data to SDK format (public function)
-func ConvertRawSegmentToSDK(segmentData map[string]interface{}) (sdk.Segment, error) {
+func ConvertRawSegmentToSDK(segmentData map[string]interface{}) (types.Segment, error) {
 	return convertRawSegmentToSDK(segmentData)
 }
 
 // convertRawSegmentToSDK converts raw segment data to SDK format
-func convertRawSegmentToSDK(segmentData map[string]interface{}) (sdk.Segment, error) {
+func convertRawSegmentToSDK(segmentData map[string]interface{}) (types.Segment, error) {
 	id, ok := segmentData["id"].(float64)
 	if !ok {
-		return sdk.Segment{}, errors.New("invalid segment id")
+		return types.Segment{}, errors.New("invalid segment id")
 	}
 
 	name, ok := segmentData["name"].(string)
 	if !ok {
-		return sdk.Segment{}, errors.New("invalid segment name")
+		return types.Segment{}, errors.New("invalid segment name")
 	}
 
 	description, ok := segmentData["description"].(string)
@@ -395,21 +395,21 @@ func convertRawSegmentToSDK(segmentData map[string]interface{}) (sdk.Segment, er
 	}
 
 	// Extract rules
-	var rules []sdk.SegmentRule
+	var rules []types.SegmentRule
 	if rulesData, ok := segmentData["rules"].([]interface{}); ok {
-		rules = make([]sdk.SegmentRule, len(rulesData))
+		rules = make([]types.SegmentRule, len(rulesData))
 		for i, ruleData := range rulesData {
 			if ruleMap, ok := ruleData.(map[string]interface{}); ok {
 				sdkRule, err := convertRawSegmentRuleToSDK(ruleMap)
 				if err != nil {
-					return sdk.Segment{}, err
+					return types.Segment{}, err
 				}
 				rules[i] = sdkRule
 			}
 		}
 	}
 
-	return sdk.Segment{
+	return types.Segment{
 		ID:          uint(id),
 		Name:        name,
 		Description: description,
@@ -418,71 +418,54 @@ func convertRawSegmentToSDK(segmentData map[string]interface{}) (sdk.Segment, er
 }
 
 // convertRawSegmentRuleToSDK converts raw segment rule data to SDK format
-func convertRawSegmentRuleToSDK(ruleData map[string]interface{}) (sdk.SegmentRule, error) {
+func convertRawSegmentRuleToSDK(ruleData map[string]interface{}) (types.SegmentRule, error) {
 	id, ok := ruleData["id"].(float64)
 	if !ok {
-		return sdk.SegmentRule{}, errors.New("invalid segment rule id")
-	}
-
-	name, ok := ruleData["name"].(string)
-	if !ok {
-		return sdk.SegmentRule{}, errors.New("invalid segment rule name")
-	}
-
-	description, ok := ruleData["description"].(string)
-	if !ok {
-		description = ""
+		return types.SegmentRule{}, errors.New("invalid segment rule id")
 	}
 
 	segmentID, ok := ruleData["segmentId"].(float64)
 	if !ok {
-		return sdk.SegmentRule{}, errors.New("invalid segment rule segmentId")
+		return types.SegmentRule{}, errors.New("invalid segment rule segmentId")
 	}
 
 	// Extract conditions
-	var conditions []sdk.RuleCondition
+	var conditions []types.RuleCondition
 	if conditionsData, ok := ruleData["conditions"].([]interface{}); ok {
-		conditions = make([]sdk.RuleCondition, len(conditionsData))
+		conditions = make([]types.RuleCondition, len(conditionsData))
 		for i, conditionData := range conditionsData {
 			if conditionMap, ok := conditionData.(map[string]interface{}); ok {
 				sdkCondition, err := convertRawConditionToSDK(conditionMap)
 				if err != nil {
-					return sdk.SegmentRule{}, err
+					return types.SegmentRule{}, err
 				}
 				conditions[i] = sdkCondition
 			}
 		}
 	}
 
-	return sdk.SegmentRule{
-		ID:          uint(id),
-		Name:        name,
-		Description: description,
-		SegmentID:   uint(segmentID),
-		Conditions:  conditions,
+	return types.SegmentRule{
+		ID:         uint(id),
+		SegmentID:  uint(segmentID),
+		Conditions: conditions,
 	}, nil
 }
 
 // convertRawConditionToSDK converts raw condition data to SDK format
-func convertRawConditionToSDK(conditionData map[string]interface{}) (sdk.RuleCondition, error) {
+func convertRawConditionToSDK(conditionData map[string]interface{}) (types.RuleCondition, error) {
 	id, ok := conditionData["id"].(float64)
 	if !ok {
-		return sdk.RuleCondition{}, errors.New("invalid condition id")
-	}
-
-	attributeID, ok := conditionData["attributeId"].(float64)
-	if !ok {
-		return sdk.RuleCondition{}, errors.New("invalid condition attributeId")
+		return types.RuleCondition{}, errors.New("invalid condition id")
 	}
 
 	operator, ok := conditionData["operator"].(string)
 	if !ok {
-		return sdk.RuleCondition{}, errors.New("invalid condition operator")
+		return types.RuleCondition{}, errors.New("invalid condition operator")
 	}
 
 	value, ok := conditionData["value"].(string)
 	if !ok {
-		return sdk.RuleCondition{}, errors.New("invalid condition value")
+		return types.RuleCondition{}, errors.New("invalid condition value")
 	}
 
 	// Extract attribute information from nested attribute object
@@ -527,10 +510,9 @@ func convertRawConditionToSDK(conditionData map[string]interface{}) (sdk.RuleCon
 		}
 	}
 
-	return sdk.RuleCondition{
+	return types.RuleCondition{
 		ID:                uint(id),
-		AttributeID:       uint(attributeID),
-		Operator:          sdk.ConditionOperator(operator),
+		Operator:          types.ConditionOperator(operator),
 		Value:             value,
 		AttributeName:     attributeName,
 		AttributeDataType: attributeDataType,
@@ -539,20 +521,20 @@ func convertRawConditionToSDK(conditionData map[string]interface{}) (sdk.RuleCon
 }
 
 // convertRawVariantToSDK converts raw variant data to SDK format
-func convertRawVariantToSDK(variantData map[string]interface{}) (sdk.ExperimentVariant, error) {
+func convertRawVariantToSDK(variantData map[string]interface{}) (types.ExperimentVariant, error) {
 	id, ok := variantData["id"].(float64)
 	if !ok {
-		return sdk.ExperimentVariant{}, errors.New("invalid variant id")
+		return types.ExperimentVariant{}, errors.New("invalid variant id")
 	}
 
 	experimentID, ok := variantData["experimentId"].(float64)
 	if !ok {
-		return sdk.ExperimentVariant{}, errors.New("invalid variant experimentId")
+		return types.ExperimentVariant{}, errors.New("invalid variant experimentId")
 	}
 
 	name, ok := variantData["name"].(string)
 	if !ok {
-		return sdk.ExperimentVariant{}, errors.New("invalid variant name")
+		return types.ExperimentVariant{}, errors.New("invalid variant name")
 	}
 
 	description, ok := variantData["description"].(string)
@@ -562,25 +544,25 @@ func convertRawVariantToSDK(variantData map[string]interface{}) (sdk.ExperimentV
 
 	trafficAllocation, ok := variantData["trafficAllocation"].(float64)
 	if !ok {
-		return sdk.ExperimentVariant{}, errors.New("invalid variant trafficAllocation")
+		return types.ExperimentVariant{}, errors.New("invalid variant trafficAllocation")
 	}
 
 	// Extract parameters
-	var parameters []sdk.ExperimentVariantParameter
+	var parameters []types.ExperimentVariantParameter
 	if parametersData, ok := variantData["parameters"].([]interface{}); ok {
-		parameters = make([]sdk.ExperimentVariantParameter, len(parametersData))
+		parameters = make([]types.ExperimentVariantParameter, len(parametersData))
 		for i, paramData := range parametersData {
 			if paramMap, ok := paramData.(map[string]interface{}); ok {
 				sdkParam, err := convertRawVariantParameterToSDK(paramMap)
 				if err != nil {
-					return sdk.ExperimentVariant{}, err
+					return types.ExperimentVariant{}, err
 				}
 				parameters[i] = sdkParam
 			}
 		}
 	}
 
-	return sdk.ExperimentVariant{
+	return types.ExperimentVariant{
 		ID:                int(id),
 		ExperimentID:      int(experimentID),
 		Name:              name,
@@ -591,35 +573,35 @@ func convertRawVariantToSDK(variantData map[string]interface{}) (sdk.ExperimentV
 }
 
 // convertRawVariantParameterToSDK converts raw variant parameter data to SDK format
-func convertRawVariantParameterToSDK(paramData map[string]interface{}) (sdk.ExperimentVariantParameter, error) {
+func convertRawVariantParameterToSDK(paramData map[string]interface{}) (types.ExperimentVariantParameter, error) {
 	id, ok := paramData["id"].(float64)
 	if !ok {
-		return sdk.ExperimentVariantParameter{}, errors.New("invalid parameter id")
+		return types.ExperimentVariantParameter{}, errors.New("invalid parameter id")
 	}
 
 	parameterDataType, ok := paramData["parameterDataType"].(string)
 	if !ok {
-		return sdk.ExperimentVariantParameter{}, errors.New("invalid parameter data type")
+		return types.ExperimentVariantParameter{}, errors.New("invalid parameter data type")
 	}
 
 	parameterID, ok := paramData["parameterId"].(float64)
 	if !ok {
-		return sdk.ExperimentVariantParameter{}, errors.New("invalid parameter id")
+		return types.ExperimentVariantParameter{}, errors.New("invalid parameter id")
 	}
 
 	parameterName, ok := paramData["parameterName"].(string)
 	if !ok {
-		return sdk.ExperimentVariantParameter{}, errors.New("invalid parameter name")
+		return types.ExperimentVariantParameter{}, errors.New("invalid parameter name")
 	}
 
 	rolloutValue, ok := paramData["rolloutValue"].(string)
 	if !ok {
-		return sdk.ExperimentVariantParameter{}, errors.New("invalid parameter rollout value")
+		return types.ExperimentVariantParameter{}, errors.New("invalid parameter rollout value")
 	}
 
-	return sdk.ExperimentVariantParameter{
+	return types.ExperimentVariantParameter{
 		ID:                int(id),
-		ParameterDataType: sdk.ParameterDataType(parameterDataType),
+		ParameterDataType: types.ParameterDataType(parameterDataType),
 		ParameterID:       int(parameterID),
 		ParameterName:     parameterName,
 		RolloutValue:      rolloutValue,
